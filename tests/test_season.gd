@@ -6,37 +6,63 @@ const Layouts = preload("res://sim/layouts.gd")
 const NIGHTS := 30
 const START_DEMAND := 500
 const MAX_DEMAND := 3600
-const MIN_DEMAND := 90 # floor: night.run divides by groups, 0 groups crashes
+const MIN_DEMAND := 90
 
 const SEEDS := 10
+
+const LOOSE := 300.0
+const PACKED := 120.0
+
 
 func _initialize() -> void:
 	for name in Layouts.NAMED:
 		print("\n%s" % name)
-		print("interval | avg final demand | avg profit | min | max")
+		print("cash out | avg profit | std dev | min | max")
 
-		for interval in range(240, 301, 20):
-			var profit_sum := 0.0
-			var demand_sum := 0
-			var worst := INF
-			var best := -INF
-
-			for s in SEEDS:
-				var rng := RandomNumberGenerator.new()
-				rng.seed = 12345 + s
-
-				var demand := START_DEMAND
-				var season := 0.0
-				for night in NIGHTS:
-					var r: Dictionary = Night.run(Layouts.NAMED[name], float(interval), rng, demand)
-					season += r.profit
-					demand = clampi(Night.next_demand(demand, r.satisfaction), MIN_DEMAND, MAX_DEMAND)
-
-				profit_sum += season
-				demand_sum += demand
-				worst = minf(worst, season)
-				best = maxf(best, season)
-			print("%8d | %10d | $%.0f | $%.0f | $%.0f"
-				% [interval, demand_sum / SEEDS, profit_sum / SEEDS, worst, best])
-	
+		# 31 = never pack, 1 = pack from night one
+		#for cash_out_day in range(1, 32, 2):
+		for cash_out_day in range(25, 32):
+			var results := run_season(Layouts.NAMED[name], cash_out_day)
+			print("%8d | $%.0f | $%.0f | $%.0f | $%.0f"
+				% [cash_out_day, results.mean, results.std, results.worst, results.best])
 	quit()
+
+
+static func interval_for(day: int, cash_out_day: int) -> float:
+	return PACKED if day >= cash_out_day else LOOSE
+
+
+func run_season(layout: Array, cash_out_day: int) -> Dictionary:
+	var seasons: Array[float] = []
+
+	for s in SEEDS:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 12345 + s
+
+		var demand := START_DEMAND
+		var total := 0.0
+
+		for night in NIGHTS:
+			var interval := interval_for(night + 1, cash_out_day)
+			var r: Dictionary = Night.run(layout, interval, rng, demand)
+			total += r.profit
+			demand = clampi(Night.next_demand(demand, r.satisfaction), MIN_DEMAND, MAX_DEMAND)
+
+		seasons.append(total)
+
+	var mean := 0.0
+	for x in seasons:
+		mean += x
+	mean /= seasons.size()
+
+	var variance := 0.0
+	for x in seasons:
+		variance += (x - mean) * (x - mean)
+	variance /= seasons.size()
+
+	return {
+		"mean": mean,
+		"std": sqrt(variance),
+		"worst": seasons.min(),
+		"best": seasons.max(),
+	}
