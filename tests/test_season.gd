@@ -21,10 +21,12 @@ func _initialize() -> void:
 
 		# 31 = never pack, 1 = pack from night one
 		for cash_out_day in range(1, 32):
-		#for cash_out_day in range(25, 32):
+			#for cash_out_day in range(25, 32):
 			var results := run_season(Layouts.NAMED[name], cash_out_day)
-			print("%8d | $%.0f | $%.0f | $%.0f | $%.0f"
-				% [cash_out_day, results.mean, results.std, results.worst, results.best])
+			print(
+				"%8d | $%.0f | $%.0f | $%.0f | $%.0f"
+				% [cash_out_day, results.mean, results.std, results.worst, results.best]
+			)
 	quit()
 
 
@@ -60,9 +62,4 @@ func run_season(layout: Array, cash_out_day: int) -> Dictionary:
 		variance += (x - mean) * (x - mean)
 	variance /= seasons.size()
 
-	return {
-		"mean": mean,
-		"std": sqrt(variance),
-		"worst": seasons.min(),
-		"best": seasons.max(),
-	}
+	return { "mean": mean, "std": sqrt(variance), "worst": seasons.min(), "best": seasons.max() }

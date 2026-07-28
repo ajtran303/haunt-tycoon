@@ -9,6 +9,7 @@ const NIGHTS := 20
 const INTERVAL := 300.0
 const PRIME_SCALE := 0.5
 
+
 func _initialize() -> void:
 	var rng := RandomNumberGenerator.new()
 
@@ -25,6 +26,7 @@ func _initialize() -> void:
 		row += " | %5.1f" % _avg_sat(Layouts.NAMED[name], "", rng)
 		print(row)
 	quit()
+
 
 func _avg_sat(layout: Array, type: String, rng: RandomNumberGenerator) -> float:
 	rng.seed = 12345
