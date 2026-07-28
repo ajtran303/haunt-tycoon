@@ -8,6 +8,8 @@ const NAMED := {
 	"gap_banked":  [true, false, true, false, true, false, true, false, false, true],
 	"pairs": [true, true, false, false, true, true, false, false, false, true],
 	"pair_finale": [true, false, true, false, false, true, false, false, true, true],
+	"sparse":  [true, false, false, false, true, false, false, false, false, true],
+	"dense":   [true, false, true, true, false, true, false, true, false, true],
 }
 
 static func spread(scares: int, rooms: int) -> Array:
