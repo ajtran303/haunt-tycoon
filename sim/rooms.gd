@@ -1,0 +1,5 @@
+const CORRIDOR := "g"
+const SCARE := "a"
+const PAIR_SCARE := "p"
+const ANIMATRONIC := "n"
+const EFFECT := "e"

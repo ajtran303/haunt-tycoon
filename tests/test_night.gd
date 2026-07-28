@@ -2,6 +2,7 @@ extends SceneTree
 
 const Night = preload("res://sim/night.gd")
 const Layouts = preload("res://sim/layouts.gd")
+const Rooms = preload("res://sim/rooms.gd")
 
 const LAYOUT_NAME := "gap_banked"
 const MIN_SEPARATION := 2.0 # rooms between groups
@@ -11,13 +12,13 @@ func _initialize() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 12345
 
-	var layout: Array = Layouts.NAMED[LAYOUT_NAME]
+	var layout: Array = Layouts.PRESETS[LAYOUT_NAME]
 	var actors := 0
 	for room in layout:
 		match room:
-			"a":
+			Rooms.SCARE:
 				actors += 1
-			"p":
+			Rooms.PAIR_SCARE:
 				actors += 2
 	print(
 		"layout: %s | %d rooms | %d actors | %d staff"
@@ -37,7 +38,7 @@ func _sweep(layout: Array, demand: int, rng: RandomNumberGenerator) -> void:
 	var best_interval := 0
 
 	for interval in range(120, 301, 20):
-		var inside: float = Night.groups_inside(layout.size(), float(interval))
+		var inside: float = Night.concurrent_groups(layout.size(), float(interval))
 		var separation := layout.size() / inside
 
 		if separation < MIN_SEPARATION:

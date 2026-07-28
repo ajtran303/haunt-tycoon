@@ -7,14 +7,14 @@ const NIGHTS := 30
 
 const SEEDS := 10
 
-const LOOSE := 300.0
-const PACKED := 120.0
+const LOOSE_INTERVAL := 300.0
+const PACKED_INTERVAL := 120.0
 
 
 func _initialize() -> void:
-	for name in Layouts.NAMED:
-		var layout : Array = Layouts.NAMED[name]
-		print("\n%s (build $%.0f)" % [name, Night.build_cost_for(layout)])
+	for preset in Layouts.PRESETS:
+		var layout : Array = Layouts.PRESETS[preset]
+		print("\n%s (build $%.0f)" % [preset, Night.build_cost_for(layout)])
 		print("cash out | avg profit | std dev | min | max")
 
 		# 31 = never pack, 1 = pack from night one
@@ -29,7 +29,7 @@ func _initialize() -> void:
 
 
 static func interval_for(day: int, cash_out_day: int) -> float:
-	return PACKED if day >= cash_out_day else LOOSE
+	return PACKED_INTERVAL if day >= cash_out_day else LOOSE_INTERVAL
 
 
 func run_season(layout: Array, cash_out_day: int) -> Dictionary:

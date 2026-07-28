@@ -1,4 +1,4 @@
-const NAMED := {
+const PRESETS := {
 	"handpicked": ["a", "g", "a", "g", "g", "a", "g", "a", "g", "a"],
 	"alternating": ["g", "a", "g", "a", "g", "a", "g", "a", "g", "a"],
 	"front_loaded": ["a", "a", "a", "a", "a", "g", "g", "g", "g", "g"],
@@ -13,14 +13,14 @@ const NAMED := {
 	"effect_finale": ["a", "g", "a", "g", "a", "g", "a", "g", "g", "e"], # guaranteed ending: variance insurance
 }
 
-
+# Bresenham's line-drawing algorithm
 static func spread(scares: int, rooms: int) -> Array:
 	var layout := []
-	var acc := 0
+	var err := 0
 	for i in rooms:
-		acc += scares
-		if acc >= rooms:
-			acc -= rooms
+		err += scares
+		if err >= rooms:
+			err -= rooms
 			layout.append("a")
 		else:
 			layout.append("g")
