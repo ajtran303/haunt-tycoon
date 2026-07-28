@@ -16,7 +16,6 @@ const STAFF_WAGE := 200.0
 const ACTOR_WAGE := 300.0
 
 const NIGHTLY_OVERHEAD := 3_500.0 # rent, insurance, utilities, permits
-const UPKEEP_RATE := 0.10 # nightly running cost as a share of a room's build cost
 const MARKETING_PER_VISITOR := 2.5 # the industry's $2-3/head acquisition cost
 
 const BUILD_COST := {
@@ -25,6 +24,14 @@ const BUILD_COST := {
 	"p": 3_000.0, # two-actor scene: bigger set, cue rigging
 	"n": 12_000.0, # the machine itself, install, air lines
 	"e": 1_500.0, # fog rig or air cannon, wiring
+}
+
+const UPKEEP := {
+	"g": 50.0, # relamp, repaint scuffs
+	"a": 200.0, # props, blood, costume wear: staffed rooms churn nightly
+	"p": 300.0,
+	"n": 600.0, # maintenance and air, but the machine needs no costumer
+	"e": 150.0, # fog fluid, per the research ~$50-150/night is realistic
 }
 
 const GIFT_PER_ACTOR_HIT := 5.0
@@ -154,7 +161,10 @@ static func build_cost_for(layout: Array) -> float:
 
 
 static func upkeep_for(layout: Array) -> float:
-	return UPKEEP_RATE * build_cost_for(layout)
+	var cost := 0.0
+	for room in layout:
+		cost += UPKEEP[room]
+	return cost
 
 
 static func staff_for(layout: Array) -> int:
