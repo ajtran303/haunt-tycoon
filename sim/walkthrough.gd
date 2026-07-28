@@ -5,7 +5,7 @@ const RECOVERY := HIT_COST * 0.5
 const CEILING := 85.0
 const END_FADE_PER_ROOM := 5.0
 const PRIME_ON_HIT := 40.0
-const PRIME_DECAY_PER_ROOM := 20.0
+const PRIME_DECAY_PER_ROOM := 40
 const PRIME_SCALE := 0.5
 
 static func run(layout: Array, rng: RandomNumberGenerator, recovery: float = RECOVERY, ceiling: float = CEILING, prime_scale: float = PRIME_SCALE) -> Dictionary:

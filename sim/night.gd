@@ -17,8 +17,10 @@ const CONCESSION_PER_MIN := 0.10 # not used yet
 const SAT_FLOOR := 22.0
 const SAT_CEILING := 95.0
 
-const BREAK_EVEN_SAT := 70.0
+const BREAK_EVEN_SAT := 72.0
 const GROWTH_PER_SAT_POINT := 0.01 # demand change per satisfaction point per night
+
+const PEAK_WEIGHT := 0.65 # how much the best moment counts vs the ending
 
 static func run(layout: Array, interval: float, rng, demand: int = DEMAND, prime_scale: float = Walkthrough.PRIME_SCALE) -> Dictionary:
 	var capacity := int(NIGHT_SECONDS / interval)
@@ -57,7 +59,7 @@ static func groups_inside(rooms: int, interval: float) -> float:
 static func satisfaction(w: Dictionary) -> float:
 	if w.hits == 0:
 		return 0.0
-	var raw := float(w.peak + w.end) / 2.0
+	var raw : float = PEAK_WEIGHT * w.peak + (1.0 - PEAK_WEIGHT) * w.end
 	var t := (raw - SAT_FLOOR) / (SAT_CEILING - SAT_FLOOR)
 	return clampf(t * 100.0, 0.0, 100.0)
 

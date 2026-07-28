@@ -12,19 +12,18 @@ func _initialize() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 12345
 	
-	for scale in [0.25, 0.3, 0.4, 0.5]:
-		print("\nprime scale %.2f" % scale)
-		print("layout | hit avg | satisfaction | profit/night")
-		for name in Layouts.NAMED:
-			var layout := Layouts.NAMED[name] as Array
-			var hits := 0.0
-			var sat := 0.0
-			var profit := 0.0
-			for n in NIGHTS:
-				var r: Dictionary = Night.run(layout, INTERVAL, rng, DEMAND, scale)
-				hits += r.hit_average
-				sat += r.satisfaction
-				profit += r.profit
-			print("%12s | %7.2f | %5.1f | $%.0f"
-				% [name, hits / NIGHTS, sat / NIGHTS, profit / NIGHTS])
+	print("layout | hit avg | satisfaction | profit/night")
+	for name in Layouts.NAMED:
+		rng.seed = 12345
+		var layout := Layouts.NAMED[name] as Array
+		var hits := 0.0
+		var sat := 0.0
+		var profit := 0.0
+		for n in NIGHTS:
+			var r: Dictionary = Night.run(layout, INTERVAL, rng, DEMAND)
+			hits += r.hit_average
+			sat += r.satisfaction
+			profit += r.profit
+		print("%12s | %7.2f | %5.1f | $%.0f"
+			% [name, hits / NIGHTS, sat / NIGHTS, profit / NIGHTS])
 	quit()
