@@ -1,7 +1,7 @@
 const PRESETS := {
 	"handpicked": ["a", "g", "a", "g", "g", "a", "g", "a", "g", "a"],
 	"alternating": ["g", "a", "g", "a", "g", "a", "g", "a", "g", "a"],
-	"front_loaded": ["a", "a", "a", "a", "a", "g", "g", "g", "g", "g"],
+	"front_loaded": ["a", "a", "a", "a", "a", "g", "g", "g", "g", "g"], # negative control: no pacing, no ending
 	"no_finale": ["a", "g", "a", "g", "a", "g", "a", "g", "a", "g"],
 	"gap_banked": ["a", "g", "a", "g", "a", "g", "a", "g", "g", "a"],
 	"pairs": ["a", "a", "g", "g", "a", "a", "g", "g", "g", "a"],

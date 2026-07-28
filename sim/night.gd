@@ -33,10 +33,13 @@ const CONCESSION_PER_MIN := 0.10 # not used yet
 const SAT_RAW_MIN := 22.0
 const SAT_RAW_MAX := 95.0
 
-const REP_FLOOR := 50.0 # below this, only morbid curiosity shows up
+const REP_FLOOR := 50.0 # below this, word of mouth turns against you
 const REP_FULL_REACH := 82.0 # reputation that reaches the whole pool
-const MIN_REACH := 0.025 # the trickle: ~22 visitors... floor of the curve
+const MIN_REACH := 0.025 # the trickle: floor of the curve
 const REP_DRIFT := 0.15 # how fast word of mouth moves: ~a week's memory
+
+const REP_DEAD := 30.0 # town fully writes you off
+const CURIOSITY_REACH := 0.12 # the rubbernecker crowd that still shows up at the floor
 
 const PEAK_WEIGHT := 0.65 # how much the best moment counts vs the ending
 
@@ -123,7 +126,13 @@ static func next_reputation(rep: float, sat: float) -> float:
 
 
 static func demand_for(rep: float) -> int:
-	var reach := clampf((rep - REP_FLOOR) / (REP_FULL_REACH - REP_FLOOR), MIN_REACH, 1.0)
+	var reach: float
+	if rep >= REP_FLOOR:
+		var t := clampf((rep - REP_FLOOR) / (REP_FULL_REACH - REP_FLOOR), 0.0, 1.0)
+		reach = lerpf(CURIOSITY_REACH, 1.0, t)
+	else:
+		var t := clampf((rep - REP_DEAD) / (REP_FLOOR - REP_DEAD), 0.0, 1.0)
+		reach = lerpf(MIN_REACH, CURIOSITY_REACH, t)
 	return int(TOWN_POOL * reach)
 
 
