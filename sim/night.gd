@@ -15,12 +15,12 @@ const GIFT_PER_HIT := 5.0
 const CONCESSION_PER_MIN := 0.10 # not used yet
 
 const SAT_FLOOR := 22.0
-const SAT_CEILING := 85.0
+const SAT_CEILING := 95.0
 
 const BREAK_EVEN_SAT := 70.0
 const GROWTH_PER_SAT_POINT := 0.01 # demand change per satisfaction point per night
 
-static func run(layout: Array, interval: float, rng, demand: int = DEMAND) -> Dictionary:
+static func run(layout: Array, interval: float, rng, demand: int = DEMAND, prime_scale: float = Walkthrough.PRIME_SCALE) -> Dictionary:
 	var capacity := int(NIGHT_SECONDS / interval)
 	var groups := mini(capacity, (demand / GROUP_SIZE))
 	var ceiling := ceiling_for(interval)
@@ -28,7 +28,7 @@ static func run(layout: Array, interval: float, rng, demand: int = DEMAND) -> Di
 	var total_sat := 0.0
 
 	for i in groups:
-		var w: Dictionary = Walkthrough.run(layout, rng, Walkthrough.RECOVERY, ceiling)
+		var w: Dictionary = Walkthrough.run(layout, rng, Walkthrough.RECOVERY, ceiling, prime_scale)
 		total_hits += w.hits
 		total_sat += satisfaction(w)
 
