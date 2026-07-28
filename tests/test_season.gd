@@ -2,14 +2,16 @@ extends SceneTree
 
 const Night = preload("res://sim/night.gd")
 const Layouts = preload("res://sim/layouts.gd")
+const Town = preload("res://sim/town.gd")
 
 const NIGHTS := 30
 
 const SEEDS := 10
 
+
 func _initialize() -> void:
 	for preset in Layouts.PRESETS:
-		var layout : Array = Layouts.PRESETS[preset]
+		var layout: Array = Layouts.PRESETS[preset]
 		print("\n%s (build $%.0f)" % [preset, Night.build_cost_for(layout)])
 		print("cash out | avg profit | std dev | min | max")
 
@@ -30,6 +32,7 @@ static func interval_for(day: int, cash_out_day: int) -> float:
 
 func run_season(layout: Array, cash_out_day: int) -> Dictionary:
 	var seasons: Array[float] = []
+	var rep_history: Array[float] = [55.0, 55.0, 55.0] # WOM_DELAY nights
 	var final_rep := 0.0
 
 	for s in SEEDS:
@@ -39,14 +42,16 @@ func run_season(layout: Array, cash_out_day: int) -> Dictionary:
 		var rep := 55.0 # a new haunt: unknown quantity, curiosity crowd
 		var total := -Night.build_cost_for(layout)
 
+		var town := Town.new()
 		for night in NIGHTS:
 			var interval := interval_for(night + 1, cash_out_day)
-			var demand := Night.demand_for(rep)
-			var r: Dictionary = Night.run(layout, interval, rng, demand)
+			var r: Dictionary = Night.run(layout, interval, rng, town.demand())
 			total += r.profit
-			rep = Night.next_reputation(rep, r.satisfaction)
+			town.record_night(r.satisfaction)
+
 		seasons.append(total)
-		final_rep = rep
+
+		final_rep = town.rep
 
 	var mean := 0.0
 	for x in seasons:

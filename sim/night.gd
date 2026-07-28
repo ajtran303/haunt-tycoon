@@ -42,8 +42,7 @@ const LOOSE_INTERVAL := 300.0 # actors fully reset
 
 const NIGHT_CAPACITY := int(NIGHT_SECONDS / PACKED_INTERVAL) * GROUP_SIZE # 1350 visitors
 
-const POOL_RATIO := 1.0 # town size relative to a sold-out packed night
-const TOWN_POOL := int(NIGHT_CAPACITY * POOL_RATIO)
+const TOWN_POOL := 1350
 
 
 static func run(
