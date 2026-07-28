@@ -7,10 +7,6 @@ const NIGHTS := 30
 
 const SEEDS := 10
 
-const LOOSE_INTERVAL := 300.0
-const PACKED_INTERVAL := 120.0
-
-
 func _initialize() -> void:
 	for preset in Layouts.PRESETS:
 		var layout : Array = Layouts.PRESETS[preset]
@@ -29,7 +25,7 @@ func _initialize() -> void:
 
 
 static func interval_for(day: int, cash_out_day: int) -> float:
-	return PACKED_INTERVAL if day >= cash_out_day else LOOSE_INTERVAL
+	return Night.PACKED_INTERVAL if day >= cash_out_day else Night.LOOSE_INTERVAL
 
 
 func run_season(layout: Array, cash_out_day: int) -> Dictionary:

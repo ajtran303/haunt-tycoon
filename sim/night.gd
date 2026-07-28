@@ -29,13 +29,21 @@ const CONCESSION_PER_MIN := 0.10 # not used yet
 const SAT_RAW_MIN := 22.0
 const SAT_RAW_MAX := 95.0
 
-const TOWN_POOL := 900 # reachable population per night at perfect reputation
 const REP_FLOOR := 50.0 # below this, only morbid curiosity shows up
 const REP_FULL_REACH := 82.0 # reputation that reaches the whole pool
 const MIN_REACH := 0.025 # the trickle: ~22 visitors... floor of the curve
 const REP_DRIFT := 0.15 # how fast word of mouth moves: ~a week's memory
 
 const PEAK_WEIGHT := 0.65 # how much the best moment counts vs the ending
+
+const MIN_SEPARATION := 2.0 # rooms between groups
+const PACKED_INTERVAL := MIN_SEPARATION * SECONDS_PER_ROOM # 120s: the dispatch floor
+const LOOSE_INTERVAL := 300.0 # actors fully reset
+
+const NIGHT_CAPACITY := int(NIGHT_SECONDS / PACKED_INTERVAL) * GROUP_SIZE # 1350 visitors
+
+const POOL_RATIO := 1.0 # town size relative to a sold-out packed night
+const TOWN_POOL := int(NIGHT_CAPACITY * POOL_RATIO)
 
 
 static func run(
@@ -82,10 +90,13 @@ static func run(
 	}
 
 
-# Min feasible dispatch_interval = MIN_SEPARATION * SECONDS_PER_ROOM = 120s.
 # 300s apart = actors fully reset. 120s = rushed.
 static func actor_ceiling_for(dispatch_interval: float) -> float:
-	return clampf(45.0 + 40.0 * (dispatch_interval - 120.0) / 180.0, 45.0, 85.0)
+	return clampf(
+		45.0 + 40.0 * (dispatch_interval - PACKED_INTERVAL) / (LOOSE_INTERVAL - PACKED_INTERVAL),
+		45.0,
+		85.0,
+	)
 
 
 static func concurrent_groups(rooms: int, dispatch_interval: float) -> float:

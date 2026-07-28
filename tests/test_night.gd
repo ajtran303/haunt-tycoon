@@ -5,7 +5,6 @@ const Layouts = preload("res://sim/layouts.gd")
 const Rooms = preload("res://sim/rooms.gd")
 
 const LAYOUT_NAME := "gap_banked"
-const MIN_SEPARATION := 2.0 # rooms between groups
 
 
 func _initialize() -> void:
@@ -41,7 +40,7 @@ func _sweep(layout: Array, demand: int, rng: RandomNumberGenerator) -> void:
 		var inside: float = Night.concurrent_groups(layout.size(), float(interval))
 		var separation := layout.size() / inside
 
-		if separation < MIN_SEPARATION:
+		if separation < Night.MIN_SEPARATION:
 			print("%8d | %.1f groups inside — too tight, skipped" % [interval, inside])
 			continue
 
