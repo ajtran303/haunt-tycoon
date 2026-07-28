@@ -1,5 +1,3 @@
-extends Node
-
 const NAMED := {
 	"handpicked": ["a", "g", "a", "g", "g", "a", "g", "a", "g", "a"],
 	"alternating": ["g", "a", "g", "a", "g", "a", "g", "a", "g", "a"],

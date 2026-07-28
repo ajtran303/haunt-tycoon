@@ -5,7 +5,7 @@ const RECOVERY := HIT_COST * 0.5
 const CEILING := 85.0
 const END_FADE_PER_ROOM := 5.0
 const PRIME_ON_HIT := 40.0
-const PRIME_DECAY_PER_ROOM := 40
+const PRIME_DECAY_PER_ROOM := 40.0
 const PRIME_SCALE := 0.5
 const BORE_FREE_GAPS := 2
 const BORE_PER_ROOM := 4.0
@@ -28,6 +28,7 @@ static func run(
 ) -> Dictionary:
 	var r := tank
 	var hits := 0
+	var real_hits := 0
 	var misses := 0
 	var peak := 0.0
 	var end := 0.0
@@ -38,6 +39,7 @@ static func run(
 	for room in layout:
 		match room:
 			"g":
+				rooms_since_scare += 1
 				if rooms_since_scare > BORE_FREE_GAPS:
 					boredom += BORE_PER_ROOM
 				arousal = maxf(0.0, arousal - PRIME_DECAY_PER_ROOM)
@@ -52,12 +54,13 @@ static func run(
 			_:
 				rooms_since_scare = 0
 				var eff_ceiling := ANIM_CEILING if room == "n" else ceiling
-				var chance := minf(r, ceiling)
+				var chance := minf(r, eff_ceiling)
 				if room == "p":
 					chance = minf(chance + DISTRACT_BONUS, CHANCE_CAP)
 				if rng.randf() * 100.0 < chance:
 					hits += 1
-					var reaction := minf(minf(r, ceiling) + arousal * prime_scale, 100.0)
+					real_hits += 1
+					var reaction := minf(minf(r, eff_ceiling) + arousal * prime_scale, 100.0)
 					peak = maxf(peak, reaction)
 					end = reaction
 					r -= HIT_COST * depletion
@@ -70,4 +73,4 @@ static func run(
 
 	end = maxf(0.0, end - END_FADE_PER_ROOM * rooms_since_scare)
 
-	return { "hits": hits, "misses": misses, "peak": peak, "boredom": boredom, "end": end }
+	return { "hits": hits, "real_hits": real_hits, "misses": misses, "peak": peak, "boredom": boredom, "end": end }

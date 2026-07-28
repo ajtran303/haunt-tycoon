@@ -27,7 +27,7 @@ const PEAK_WEIGHT := 0.65 # how much the best moment counts vs the ending
 static func run(
 	layout: Array,
 	interval: float,
-	rng,
+	rng: RandomNumberGenerator,
 	demand: int = DEMAND,
 	prime_scale: float = Walkthrough.PRIME_SCALE,
 	forced_type: String = "",
@@ -36,6 +36,7 @@ static func run(
 	var groups := mini(capacity, (demand / GROUP_SIZE))
 	var ceiling := ceiling_for(interval)
 	var total_hits := 0
+	var total_real_hits := 0
 	var total_sat := 0.0
 
 	for i in groups:
@@ -51,15 +52,17 @@ static func run(
 			v.depletion,
 		)
 		total_hits += w.hits
+		total_real_hits += w.real_hits
 		total_sat += satisfaction(w, v.tank)
 
 	var tickets := groups * GROUP_SIZE * TICKET
-	var gift := total_hits * GROUP_SIZE * GIFT_PER_HIT
+	var gift := total_real_hits * GROUP_SIZE * GIFT_PER_HIT
 	var wages := staff_for(layout) * WAGE_PER_NIGHT
 
 	return {
 		"groups": groups,
 		"hit_average": float(total_hits) / groups,
+		"real_hit_average": float(total_real_hits) / groups,
 		"satisfaction": total_sat / groups,
 		"profit": tickets + gift - wages,
 	}
@@ -100,7 +103,7 @@ static func next_demand(demand: int, satisfaction: float) -> int:
 	return int(demand * (1.0 + (satisfaction - BREAK_EVEN_SAT) * GROWTH_PER_SAT_POINT))
 
 
-static func draw_type(rng) -> String:
+static func draw_type(rng: RandomNumberGenerator) -> String:
 	var roll: float = rng.randf()
 	var acc := 0.0
 	for t in Visitors.MIX:

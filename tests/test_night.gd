@@ -1,9 +1,9 @@
-# res://tests/test_night.gd
 extends SceneTree
 
 const Night = preload("res://sim/night.gd")
+const Layouts = preload("res://sim/layouts.gd")
 
-const LAYOUT := [true, false, true, false, false, true, false, true, false, true]
+const LAYOUT_NAME := "gap_banked"
 const MIN_SEPARATION := 2.0 # rooms between groups
 
 
@@ -11,34 +11,43 @@ func _initialize() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 12345
 
-	var actors := LAYOUT.count(true)
-	print("layout: %d rooms, %d scares, %d actors\n" % [LAYOUT.size(), actors, actors])
-	print("interval | groups | hit average | profit")
+	var layout: Array = Layouts.NAMED[LAYOUT_NAME]
+	var actors := 0
+	for room in layout:
+		match room:
+			"a":
+				actors += 1
+			"p":
+				actors += 2
+	print(
+		"layout: %s | %d rooms | %d actors | %d staff"
+		% [LAYOUT_NAME, layout.size(), actors, Night.staff_for(layout)]
+	)
 
 	for demand in [450, 1800]:
 		print("\ndemand %d (%d groups)" % [demand, demand / 9])
-		print("interval | groups | hit average | satisfaction | profit")
-		_sweep(demand, actors, rng)
+		print("interval | groups | hit avg | real hits | satisfaction | profit")
+		_sweep(layout, demand, rng)
 
 	quit()
 
 
-func _sweep(demand: int, actors: int, rng: RandomNumberGenerator) -> void:
+func _sweep(layout: Array, demand: int, rng: RandomNumberGenerator) -> void:
 	var best_profit := -INF
 	var best_interval := 0
 
 	for interval in range(120, 301, 20):
-		var inside: float = Night.groups_inside(LAYOUT.size(), float(interval))
-		var separation := LAYOUT.size() / inside
+		var inside: float = Night.groups_inside(layout.size(), float(interval))
+		var separation := layout.size() / inside
 
 		if separation < MIN_SEPARATION:
 			print("%8d | %.1f groups inside — too tight, skipped" % [interval, inside])
 			continue
 
-		var r: Dictionary = Night.run(LAYOUT, float(interval), rng, demand)
+		var r: Dictionary = Night.run(layout, float(interval), rng, demand)
 		print(
-			"%8d | %6d | %8.2f | %5.1f | $%.0f"
-			% [interval, r.groups, r.hit_average, r.satisfaction, r.profit]
+			"%8d | %6d | %7.2f | %9.2f | %12.1f | $%.0f"
+			% [interval, r.groups, r.hit_average, r.real_hit_average, r.satisfaction, r.profit]
 		)
 
 		if r.profit > best_profit:
