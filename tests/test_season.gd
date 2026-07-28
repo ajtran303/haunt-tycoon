@@ -16,7 +16,7 @@ func _initialize() -> void:
 		print("cash out | avg profit | std dev | min | max")
 
 		# 31 = never pack, 1 = pack from night one
-		# Fine-sweep alternative when narrowing a peak: range(25, 32)
+		# Fine-sweep alternative when narrowing a peak: range(22, 30)
 		for cash_out_day in range(1, 32):
 			var results := run_season(layout, cash_out_day)
 			print(
@@ -39,7 +39,6 @@ func run_season(layout: Array, cash_out_day: int) -> Dictionary:
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 12345 + s
 
-		var rep := 55.0 # a new haunt: unknown quantity, curiosity crowd
 		var total := -Night.build_cost_for(layout)
 
 		var town := Town.new()

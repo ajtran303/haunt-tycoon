@@ -12,8 +12,12 @@ const TICKET_PRICE := 25.0
 const ACTORS_PER_SCARE := 2 # rotation: one on, one resetting
 const ACTORS_PER_SPECIALIST := 4 # one costumer or one makeup artist covers this many actors
 const SUPPORT_STAFF := 4 # queue, security, floaters
-const STAFF_WAGE := 100.0
-const ACTOR_WAGE := 150.0
+const STAFF_WAGE := 200.0
+const ACTOR_WAGE := 300.0
+
+const NIGHTLY_OVERHEAD := 3_500.0 # rent, insurance, utilities, permits
+const UPKEEP_RATE := 0.10 # nightly running cost as a share of a room's build cost
+const MARKETING_PER_VISITOR := 2.5 # the industry's $2-3/head acquisition cost
 
 const BUILD_COST := {
 	"g": 500.0, # bare corridor: walls, theming, lighting
@@ -79,13 +83,15 @@ static func run(
 	var tickets := groups * GROUP_SIZE * TICKET_PRICE
 	var gift := total_actor_hits * GROUP_SIZE * GIFT_PER_ACTOR_HIT
 	var wages := wages_for(layout)
+	var overhead := NIGHTLY_OVERHEAD + upkeep_for(layout)
+	var marketing := groups * GROUP_SIZE * MARKETING_PER_VISITOR
 
 	return {
 		"groups": groups,
 		"hit_average": float(total_hits) / groups,
 		"real_hit_average": float(total_actor_hits) / groups,
 		"satisfaction": total_sat / groups,
-		"profit": tickets + gift - wages,
+		"profit": tickets + gift - wages - overhead - marketing,
 	}
 
 
@@ -136,6 +142,10 @@ static func build_cost_for(layout: Array) -> float:
 	for room in layout:
 		cost += BUILD_COST[room]
 	return cost
+
+
+static func upkeep_for(layout: Array) -> float:
+	return UPKEEP_RATE * build_cost_for(layout)
 
 
 static func staff_for(layout: Array) -> int:
