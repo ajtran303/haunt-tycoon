@@ -69,7 +69,7 @@ static func run(
 					prime = PRIME_ON_HIT
 				else:
 					misses += 1
-					final_reaction = 0.0
+					final_reaction *= 0.4
 					r -= MISS_DRAIN
 		r = maxf(0.0, r)
 
