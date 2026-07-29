@@ -4,8 +4,6 @@ const Night = preload("res://sim/night.gd")
 const Town = preload("res://sim/town.gd")
 const Rooms = preload("res://sim/rooms.gd")
 
-const STARTING_CASH := 45_000.0
-const LOAN_LIMIT := -10_000.0
 const ROOM_SLOTS := 10
 
 const ROOM_COLORS := {
@@ -113,7 +111,7 @@ func start_season() -> void:
 	for i in ROOM_SLOTS:
 		layout.append(Rooms.CORRIDOR)
 	town = Town.new()
-	cash = STARTING_CASH - Night.build_cost_for(layout)
+	cash = Night.STARTING_CASH - Night.build_cost_for(layout)
 	capacity_hints = 0
 	wom_hints = 0
 	wom_direction = 0
@@ -264,7 +262,7 @@ func _night_finish(line: String) -> void:
 		b.modulate = Color.WHITE
 	%NightLog.append_text(line + "\n")
 	night += 1
-	if cash < LOAN_LIMIT:
+	if cash < Night.LOAN_LIMIT:
 		%NightLog.append_text("[color=#ef5350]The bank calls your loan. Season over.[/color]\n")
 		%RunButton.text = "Bankrupt: %s" % money(cash)
 		%RunButton.disabled = true

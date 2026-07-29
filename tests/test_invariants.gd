@@ -22,6 +22,8 @@ const MIN_TOP_BONUS := 40_000.0 # below this, the cash-out mechanic is dead
 const MIN_SPREAD := 1.30 # best/worst viable; currently 1.84, was 1.34 pre-repricing
 const AUDIENCE_CAP := 75.0 # every layout leaves one type below this; pair_bank sits at 74
 
+const TROUGH_MARGIN := 2_500.0 # viable presets must clear the loan line by this much
+
 var failed := 0
 
 
@@ -42,7 +44,10 @@ func _initialize() -> void:
 		var layout: Array = Layouts.PRESETS[p]
 
 		var be := break_even_night(layout)
-		check(be >= EARLIEST_BREAK_EVEN and be <= Night.SEASON_NIGHTS, "%s breaks even night %d" % [p, be])
+		check(
+			be >= EARLIEST_BREAK_EVEN and be <= Night.SEASON_NIGHTS,
+			"%s breaks even night %d" % [p, be],
+		)
 
 		var never_pack := mean_total(layout, Night.SEASON_NIGHTS + 1)
 		var best := never_pack
@@ -69,6 +74,12 @@ func _initialize() -> void:
 			"%s delights every audience type (worst %.1f)" % [p, worst_type_sat],
 		)
 
+		var trough := worst_trough(layout)
+		check(
+			trough > Night.LOAN_LIMIT + TROUGH_MARGIN,
+			"%s cash trough $%.0f grazes the loan line" % [p, trough],
+		)
+
 	# Loss floor: a half-full house must lose money.
 	var floor_rng := RandomNumberGenerator.new()
 	floor_rng.seed = 4242
@@ -86,6 +97,11 @@ func _initialize() -> void:
 	check(
 		max_bonus >= MIN_TOP_BONUS,
 		"best cash-out bonus only $%.0f: packing no longer matters" % max_bonus,
+	)
+
+	check(
+		worst_trough(Layouts.PRESETS["front_loaded"]) < Night.LOAN_LIMIT,
+		"trap layout survives the loan line",
 	)
 
 	print("PASS: all invariants hold" if failed == 0 else "FAIL: %d broken" % failed)
@@ -150,3 +166,18 @@ func audience_sat(layout: Array, type: String) -> float:
 		)
 		total += r.satisfaction
 	return total / 10.0
+
+
+func worst_trough(layout: Array) -> float:
+	var worst := INF
+	for s in SEEDS:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 12345 + s
+		var cash: float = Night.STARTING_CASH - Night.build_cost_for(layout)
+		var town := Town.new()
+		for night in Night.SEASON_NIGHTS:
+			var r: Dictionary = Night.run(layout, Night.LOOSE_INTERVAL, rng, town.demand())
+			cash += r.profit
+			town.record_night(r.satisfaction)
+			worst = minf(worst, cash)
+	return worst

@@ -8,6 +8,9 @@ const DEMAND := 900
 const GROUP_SIZE := 9
 const SECONDS_PER_ROOM := 60
 
+const STARTING_CASH := 45_000.0
+const LOAN_LIMIT := -12_500.0
+
 const TICKET_PRICE := 25.0
 
 const ACTORS_PER_SCARE := 2 # rotation: one on, one resetting
