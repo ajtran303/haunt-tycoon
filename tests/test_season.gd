@@ -4,8 +4,6 @@ const Night = preload("res://sim/night.gd")
 const Layouts = preload("res://sim/layouts.gd")
 const Town = preload("res://sim/town.gd")
 
-const NIGHTS := 30
-
 const SEEDS := 10
 
 
@@ -16,8 +14,7 @@ func _initialize() -> void:
 		print("cash out | avg profit | std dev | min | max")
 
 		# 31 = never pack, 1 = pack from night one
-		# Fine-sweep alternative when narrowing a peak: range(22, 30)
-		for cash_out_day in range(1, 32):
+		for cash_out_day in range(1, Night.SEASON_NIGHTS + 2):
 			var results := run_season(layout, cash_out_day)
 			print(
 				"%8d | $%.0f | $%.0f | $%.0f | $%.0f"
@@ -32,7 +29,6 @@ static func interval_for(day: int, cash_out_day: int) -> float:
 
 func run_season(layout: Array, cash_out_day: int) -> Dictionary:
 	var seasons: Array[float] = []
-	var rep_history: Array[float] = [55.0, 55.0, 55.0] # WOM_DELAY nights
 	var final_rep := 0.0
 
 	for s in SEEDS:
@@ -42,7 +38,7 @@ func run_season(layout: Array, cash_out_day: int) -> Dictionary:
 		var total := -Night.build_cost_for(layout)
 
 		var town := Town.new()
-		for night in NIGHTS:
+		for night in Night.SEASON_NIGHTS:
 			var interval := interval_for(night + 1, cash_out_day)
 			var r: Dictionary = Night.run(layout, interval, rng, town.demand())
 			total += r.profit

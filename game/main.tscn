@@ -1,0 +1,74 @@
+[gd_scene format=3 uid="uid://0b88jxutcl2c"]
+
+[ext_resource type="Script" uid="uid://boik24ipx5s63" path="res://game/main.gd" id="1_oa506"]
+
+[node name="Main" type="Control" unique_id=1010200971]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_oa506")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=463028373]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=957106321]
+layout_mode = 2
+
+[node name="TopBar" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=519549004]
+layout_mode = 2
+
+[node name="CashLabel" type="Label" parent="MarginContainer/VBoxContainer/TopBar" unique_id=610484583]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="NightLabel" type="Label" parent="MarginContainer/VBoxContainer/TopBar" unique_id=1804802443]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ResetButton" type="Button" parent="MarginContainer/VBoxContainer/TopBar" unique_id=1244239168]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Reset"
+
+[node name="ToolBar" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1289261478]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SlotRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=2037303327]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="PaceRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=325635195]
+layout_mode = 2
+
+[node name="PaceSlider" type="HSlider" parent="MarginContainer/VBoxContainer/PaceRow" unique_id=144291115]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(24, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 120.0
+max_value = 300.0
+step = 15.0
+value = 300.0
+
+[node name="PaceLabel" type="Label" parent="MarginContainer/VBoxContainer/PaceRow" unique_id=963483888]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="CostPreview" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1937493464]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RunButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=1551256321]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Run Night"
+
+[node name="ResultsLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1486607553]
+unique_name_in_owner = true
+layout_mode = 2

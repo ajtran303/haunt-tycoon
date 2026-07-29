@@ -2,6 +2,7 @@ const Walkthrough = preload("res://sim/walkthrough.gd")
 const Visitors = preload("res://sim/visitors.gd")
 const Rooms = preload("res://sim/rooms.gd")
 
+const SEASON_NIGHTS := 31
 const NIGHT_SECONDS := 18_000.0 # 5 hours
 const DEMAND := 900
 const GROUP_SIZE := 9

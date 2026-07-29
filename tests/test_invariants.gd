@@ -10,7 +10,6 @@ const Town = preload("res://sim/town.gd")
 const Visitors = preload("res://sim/visitors.gd")
 const Walkthrough = preload("res://sim/walkthrough.gd")
 
-const NIGHTS := 30
 const SEEDS := 5
 
 const TRAP_CEILING := -100_000.0 # front_loaded must lose at least this much
@@ -43,12 +42,12 @@ func _initialize() -> void:
 		var layout: Array = Layouts.PRESETS[p]
 
 		var be := break_even_night(layout)
-		check(be >= EARLIEST_BREAK_EVEN and be <= NIGHTS, "%s breaks even night %d" % [p, be])
+		check(be >= EARLIEST_BREAK_EVEN and be <= Night.SEASON_NIGHTS, "%s breaks even night %d" % [p, be])
 
-		var never_pack := mean_total(layout, 31)
+		var never_pack := mean_total(layout, Night.SEASON_NIGHTS + 1)
 		var best := never_pack
-		var best_day := 31
-		for day in range(1, 31):
+		var best_day := Night.SEASON_NIGHTS + 1
+		for day in range(1, Night.SEASON_NIGHTS + 1):
 			var m := mean_total(layout, day)
 			if m > best:
 				best = m
@@ -104,7 +103,7 @@ func season_total(layout: Array, cash_out_day: int, seed_offset: int) -> float:
 	rng.seed = 12345 + seed_offset
 	var total := -Night.build_cost_for(layout)
 	var town := Town.new()
-	for night in NIGHTS:
+	for night in Night.SEASON_NIGHTS:
 		var interval: float = (
 			Night.PACKED_INTERVAL if night + 1 >= cash_out_day else Night.LOOSE_INTERVAL
 		)
@@ -127,7 +126,7 @@ func break_even_night(layout: Array) -> int:
 	rng.seed = 12345
 	var total := -Night.build_cost_for(layout)
 	var town := Town.new()
-	for night in NIGHTS:
+	for night in Night.SEASON_NIGHTS:
 		var r: Dictionary = Night.run(layout, Night.LOOSE_INTERVAL, rng, town.demand())
 		total += r.profit
 		town.record_night(r.satisfaction)
