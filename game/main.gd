@@ -115,14 +115,33 @@ func start_season() -> void:
 func _on_slot_pressed(i: int) -> void:
 	if layout[i] == selected_tool:
 		return
-	var cost: float = Night.BUILD_COST[selected_tool]
-	if night == 1:
-		cost -= Night.BUILD_COST[layout[i]] # blueprint phase: swap refunds the old room
+	var cost := place_cost(selected_tool, i)
 	if cost > cash:
+		_flash_cash()
 		return
 	cash -= cost
 	layout[i] = selected_tool
 	refresh()
+
+
+func place_cost(type: String, i: int) -> float:
+	var cost: float = Night.BUILD_COST[type]
+	if night == 1:
+		cost -= Night.BUILD_COST[layout[i]] # blueprint phase: swap refunds the old room
+	return cost
+
+
+func cheapest_place_cost(type: String) -> float:
+	var cheapest := INF
+	for i in layout.size():
+		if layout[i] != type:
+			cheapest = minf(cheapest, place_cost(type, i))
+	return cheapest
+
+
+func _flash_cash() -> void:
+	%CashLabel.modulate = Color(1.0, 0.35, 0.35)
+	create_tween().tween_property(%CashLabel, "modulate", Color.WHITE, 0.4)
 
 
 func refresh() -> void:
@@ -143,7 +162,7 @@ func refresh() -> void:
 		b.add_theme_stylebox_override("pressed", slot_style(ROOM_COLORS[layout[i]].darkened(0.15)))
 
 	for b in %ToolBar.get_children():
-		b.disabled = Night.BUILD_COST[b.get_meta("type")] > cash
+		b.disabled = cheapest_place_cost(b.get_meta("type")) > cash
 
 	%CostPreview.text = "staff %d, $%.0f wages + upkeep tonight" % [
 		Night.staff_for(layout),
