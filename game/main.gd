@@ -164,9 +164,10 @@ func refresh() -> void:
 	for b in %ToolBar.get_children():
 		b.disabled = cheapest_place_cost(b.get_meta("type")) > cash
 
-	%CostPreview.text = "staff %d, $%.0f wages + upkeep tonight" % [
+	%CostPreview.text = "staff %d, $%.0f wages + upkeep tonight, + $%.2f marketing per visitor" % [
 		Night.staff_for(layout),
 		Night.wages_for(layout) + Night.upkeep_for(layout) + Night.NIGHTLY_OVERHEAD,
+		Night.MARKETING_PER_VISITOR,
 	]
 
 	var strain := "actors fully reset"
@@ -188,12 +189,15 @@ func _on_run_night() -> void:
 	var sold_out: bool = demand / Night.GROUP_SIZE > capacity
 	town.record_night(r.satisfaction)
 	var color := "66bb6a" if r.profit >= 0.0 else "ef5350"
-	var line := "[b]Oct %d[/b]  %d visitors. %s [color=#%s]$%.0f[/color]" % [
+	var line := "[b]Oct %d[/b]  %d visitors × $%.0f tickets + $%.0f gifts − $%.0f costs = [color=#%s]$%.0f[/color]. %s" % [
 		night,
 		r.groups * Night.GROUP_SIZE,
-		crowd_word(r.satisfaction),
+		Night.TICKET_PRICE,
+		r.gift,
+		r.costs,
 		color,
 		r.profit,
+		crowd_word(r.satisfaction),
 	]
 	if sold_out:
 		line += " [color=#e0a458]Sold out! Line down the block.[/color]"

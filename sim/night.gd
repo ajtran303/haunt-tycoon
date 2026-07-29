@@ -102,6 +102,9 @@ static func run(
 		"hit_average": float(total_hits) / groups,
 		"real_hit_average": float(total_actor_hits) / groups,
 		"satisfaction": total_sat / groups,
+		"tickets": tickets,
+		"gift": gift,
+		"costs": wages + overhead + marketing,
 		"profit": tickets + gift - wages - overhead - marketing,
 	}
 
