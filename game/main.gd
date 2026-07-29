@@ -292,6 +292,8 @@ func crowd_word(sat: float) -> String:
 
 func night_note(r: Dictionary) -> String:
 	if r.satisfaction >= 60.0:
+		if r.profit < 0.0:
+			return "They loved it; there just weren't enough of them to pay for all this."
 		return ""
 	if interval <= PACES["Packed"]:
 		return "The actors run ragged at this pace."
