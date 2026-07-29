@@ -75,6 +75,7 @@ func _build_pace_bar() -> void:
 	var pace_group := ButtonGroup.new()
 	for pace_name in PACES:
 		var b := Button.new()
+		b.set_meta("interval", PACES[pace_name])
 		b.toggle_mode = true
 		b.button_group = pace_group
 		b.text = pace_name
@@ -101,9 +102,13 @@ func start_season() -> void:
 		layout.append(Rooms.CORRIDOR)
 	town = Town.new()
 	cash = STARTING_CASH - Night.build_cost_for(layout)
+	capacity_hints = 0
 	%RunButton.text = "Run night"
 	%RunButton.disabled = false
 	%NightLog.clear()
+	interval = PACES["Loose"]
+	for b in %PaceBar.get_children():
+		b.button_pressed = b.get_meta("interval") == interval
 	refresh()
 
 
@@ -131,7 +136,6 @@ func refresh() -> void:
 		%NightLabel.text = "Halloween"
 
 	for i in layout.size():
-		%SlotRow.get_child(i).text = TOOLS[layout[i]]
 		var b: Button = %SlotRow.get_child(i)
 		b.text = TOOLS[layout[i]].to_upper()
 		b.add_theme_stylebox_override("normal", slot_style(ROOM_COLORS[layout[i]]))
@@ -155,7 +159,7 @@ func refresh() -> void:
 		int(Night.NIGHT_SECONDS / interval),
 		strain,
 	]
-	
+
 	%BlueprintNote.visible = night == 1
 
 
@@ -164,7 +168,6 @@ func _on_run_night() -> void:
 	var capacity := int(Night.NIGHT_SECONDS / interval)
 	var r: Dictionary = Night.run(layout, interval, rng, demand)
 	var sold_out: bool = demand / Night.GROUP_SIZE > capacity
-	cash += r.profit
 	town.record_night(r.satisfaction)
 	var color := "66bb6a" if r.profit >= 0.0 else "ef5350"
 	var line := "[b]Oct %d[/b]  %d visitors. %s [color=#%s]$%.0f[/color]" % [
@@ -179,12 +182,36 @@ func _on_run_night() -> void:
 		if interval > PACES["Packed"] and capacity_hints < 2:
 			capacity_hints += 1
 			line += " [color=#8d99ae]A faster line pace would admit more.[/color]"
+	%RunButton.disabled = true
+	%ResetButton.disabled = true
+	var cash_before := cash
+	cash += r.profit
+	var visitors: int = r.groups * Night.GROUP_SIZE
+	var tween := create_tween()
+	var duration := clampf(1.5 + r.groups * 0.03, 1.5, 5.0)
+	tween.tween_method(_night_tick.bind(cash_before, visitors), 0.0, 1.0, duration)
+	tween.tween_callback(_night_finish.bind(line))
+
+
+func _night_tick(t: float, cash_before: float, visitors: int) -> void:
+	%CashLabel.text = "$%.0f" % lerpf(cash_before, cash, t)
+	%NightLabel.text = "Oct %d | %d visitors so far" % [night, int(visitors * t)]
+	for i in %SlotRow.get_child_count():
+		var b: Button = %SlotRow.get_child(i)
+		b.modulate = Color(1.4, 1.4, 1.4) if i == int(t * 40.0) % 10 else Color.WHITE
+
+
+func _night_finish(line: String) -> void:
+	for b in %SlotRow.get_children():
+		b.modulate = Color.WHITE
 	%NightLog.append_text(line + "\n")
 	night += 1
 	if night == 2:
 		%NightLog.append_text(
 			"[color=#8d99ae]Construction locked in. Rebuilding now costs full price, no refunds.[/color]\n"
 		)
+	%RunButton.disabled = false
+	%ResetButton.disabled = false
 	if night > Night.SEASON_NIGHTS:
 		%RunButton.text = "Season over: $%.0f" % cash
 		%RunButton.disabled = true
