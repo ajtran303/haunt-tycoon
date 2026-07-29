@@ -24,6 +24,14 @@ const TOOLS := {
 	Rooms.EFFECT: "Effect",
 }
 
+const TOOL_TIPS := {
+	Rooms.CORRIDOR: "A breather. Visitors settle their nerves,\nready to be scared properly again.\nToo many in a row and they get bored.",
+	Rooms.SCARE: "A live actor. The big scares, but they can whiff,\nand actors draw wages every night.",
+	Rooms.PAIR_SCARE: "Two actors working a scene together.\nMuch harder to see coming. Twice the wages.",
+	Rooms.ANIMATRONIC: "A machine on a trigger. Never tires, draws no wage,\nnever quite as terrifying as a person. Heavy upkeep.",
+	Rooms.EFFECT: "Fog and air blasts. Always fires,\nbut it's a jolt, not a fright.",
+}
+
 const PACES := { "Loose": 300.0, "Brisk": 200.0, "Packed": 120.0 }
 
 var interval: float = PACES["Loose"]
@@ -36,6 +44,8 @@ var selected_tool: String = Rooms.SCARE
 var rng := RandomNumberGenerator.new()
 
 var capacity_hints := 0
+var wom_hints := 0
+var wom_direction := 0
 
 
 func _ready() -> void:
@@ -53,6 +63,7 @@ func _build_toolbar() -> void:
 	for type in TOOLS:
 		var b := Button.new()
 		b.set_meta("type", type)
+		b.tooltip_text = TOOL_TIPS[type]
 		b.toggle_mode = true
 		b.button_group = tool_group
 		b.text = "%s $%d" % [TOOLS[type], Night.BUILD_COST[type]]
@@ -104,6 +115,8 @@ func start_season() -> void:
 	town = Town.new()
 	cash = STARTING_CASH - Night.build_cost_for(layout)
 	capacity_hints = 0
+	wom_hints = 0
+	wom_direction = 0
 	%RunButton.text = "Run night"
 	%RunButton.disabled = false
 	%NightLog.clear()
@@ -146,7 +159,7 @@ func _flash_cash() -> void:
 
 
 func refresh() -> void:
-	%CashLabel.text = "$%.0f" % cash
+	%CashLabel.text = money(cash)
 	%CashLabel.add_theme_color_override(
 		"font_color",
 		Color.INDIAN_RED if cash < 0.0 else Color.WHITE,
@@ -190,14 +203,14 @@ func _on_run_night() -> void:
 	var sold_out: bool = demand / Night.GROUP_SIZE > capacity
 	town.record_night(r.satisfaction)
 	var color := "66bb6a" if r.profit >= 0.0 else "ef5350"
-	var line := "[b]Oct %d[/b]  %d visitors × $%.0f tickets + $%.0f gifts − $%.0f costs = [color=#%s]$%.0f[/color]. %s" % [
+	var line := "[b]Oct %d[/b]  %d visitors × $%.0f tickets + $%.0f gifts − $%.0f costs = [color=#%s]%s[/color]. %s" % [
 		night,
 		r.groups * Night.GROUP_SIZE,
 		Night.TICKET_PRICE,
 		r.gift,
 		r.costs,
 		color,
-		r.profit,
+		money(r.profit),
 		crowd_word(r.satisfaction),
 	]
 	var note := night_note(r)
@@ -209,10 +222,18 @@ func _on_run_night() -> void:
 			capacity_hints += 1
 			line += " [color=#8d99ae]A faster line pace would admit more.[/color]"
 	var m: float = town.momentum()
-	if m >= 4.0:
-		line += " [color=#8d99ae]Good word is getting around; expect bigger crowds in a few nights.[/color]"
-	elif m <= -4.0:
-		line += " [color=#8d99ae]Bad word is spreading; crowds will thin soon.[/color]"
+	var dir := 1 if m >= 4.0 else (-1 if m <= -4.0 else 0)
+	if dir != 0:
+		if dir != wom_direction:
+			wom_direction = dir
+			wom_hints = 0
+		if wom_hints < 2:
+			wom_hints += 1
+			line += " [color=#8d99ae]%s[/color]" % (
+				"Good word is getting around; expect bigger crowds in a few nights."
+				if dir > 0
+				else "Bad word is spreading; crowds will thin soon."
+			)
 	%RunButton.disabled = true
 	%ResetButton.disabled = true
 	var cash_before := cash
@@ -225,7 +246,7 @@ func _on_run_night() -> void:
 
 
 func _night_tick(t: float, cash_before: float, visitors: int) -> void:
-	%CashLabel.text = "$%.0f" % lerpf(cash_before, cash, t)
+	%CashLabel.text = money(lerpf(cash_before, cash, t))
 	%NightLabel.text = "Oct %d | %d visitors so far" % [night, int(visitors * t)]
 	for i in %SlotRow.get_child_count():
 		var b: Button = %SlotRow.get_child(i)
@@ -242,7 +263,7 @@ func _night_finish(line: String) -> void:
 	night += 1
 	if cash < LOAN_LIMIT:
 		%NightLog.append_text("[color=#ef5350]The bank calls your loan. Season over.[/color]\n")
-		%RunButton.text = "Bankrupt: $%.0f" % cash
+		%RunButton.text = "Bankrupt: %s" % money(cash)
 		%RunButton.disabled = true
 		refresh()
 		return
@@ -251,7 +272,7 @@ func _night_finish(line: String) -> void:
 			"[color=#8d99ae]Construction locked in. Rebuilding now costs full price, no refunds.[/color]\n"
 		)
 	if night > Night.SEASON_NIGHTS:
-		%RunButton.text = "Season over: $%.0f" % cash
+		%RunButton.text = "Season over: %s" % money(cash)
 		%RunButton.disabled = true
 	refresh()
 
@@ -272,7 +293,7 @@ func night_note(r: Dictionary) -> String:
 	if r.satisfaction >= 60.0:
 		return ""
 	if interval <= PACES["Packed"]:
-		return "The actors looked run ragged at this pace."
+		return "The actors run ragged at this pace."
 	if r.boredom >= 6.0:
 		return "Long dead stretches between scares."
 	if trailing_corridors() >= 2:
@@ -289,3 +310,7 @@ func trailing_corridors() -> int:
 		n += 1
 		i -= 1
 	return n
+
+
+func money(x: float) -> String:
+	return "-$%.0f" % absf(x) if x < 0.0 else "$%.0f" % x
