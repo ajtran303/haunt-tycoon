@@ -199,11 +199,19 @@ func _on_run_night() -> void:
 		r.profit,
 		crowd_word(r.satisfaction),
 	]
+	var note := night_note(r)
+	if note != "":
+		line += " [color=#8d99ae]%s[/color]" % note
 	if sold_out:
 		line += " [color=#e0a458]Sold out! Line down the block.[/color]"
 		if interval > PACES["Packed"] and capacity_hints < 2:
 			capacity_hints += 1
 			line += " [color=#8d99ae]A faster line pace would admit more.[/color]"
+	var m: float = town.momentum()
+	if m >= 4.0:
+		line += " [color=#8d99ae]Good word is getting around; expect bigger crowds in a few nights.[/color]"
+	elif m <= -4.0:
+		line += " [color=#8d99ae]Bad word is spreading; crowds will thin soon.[/color]"
 	%RunButton.disabled = true
 	%ResetButton.disabled = true
 	var cash_before := cash
@@ -257,3 +265,26 @@ func crowd_word(sat: float) -> String:
 	if sat >= 30.0:
 		return "People left flat."
 	return "Walkouts and refund demands."
+
+
+func night_note(r: Dictionary) -> String:
+	if r.satisfaction >= 60.0:
+		return ""
+	if interval <= PACES["Packed"]:
+		return "The actors looked run ragged at this pace."
+	if r.boredom >= 6.0:
+		return "Long dead stretches between scares."
+	if trailing_corridors() >= 2:
+		return "They walked out through quiet rooms; the ending fell flat."
+	if r.misses >= 2.5:
+		return "Rough night: scare after scare just whiffed."
+	return "The scares came too thick and fast to land."
+
+
+func trailing_corridors() -> int:
+	var n := 0
+	var i := layout.size() - 1
+	while i >= 0 and layout[i] == Rooms.CORRIDOR:
+		n += 1
+		i -= 1
+	return n

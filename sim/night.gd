@@ -74,6 +74,10 @@ static func run(
 	var total_hits := 0
 	var total_actor_hits := 0
 	var total_sat := 0.0
+	var total_misses := 0
+	var total_boredom := 0.0
+	var total_peak := 0.0
+	var total_final := 0.0
 
 	for i in groups:
 		var type := forced_type if forced_type != "" else draw_type(rng)
@@ -90,6 +94,10 @@ static func run(
 		total_hits += w.hits
 		total_actor_hits += w.actor_hits
 		total_sat += satisfaction(w, v.tank)
+		total_misses += w.misses
+		total_boredom += w.boredom
+		total_peak += w.peak
+		total_final += w.final_reaction
 
 	var tickets := groups * GROUP_SIZE * TICKET_PRICE
 	var gift := total_actor_hits * GROUP_SIZE * GIFT_PER_ACTOR_HIT
@@ -102,6 +110,10 @@ static func run(
 		"hit_average": float(total_hits) / groups,
 		"real_hit_average": float(total_actor_hits) / groups,
 		"satisfaction": total_sat / groups,
+		"misses": float(total_misses) / groups,
+		"boredom": total_boredom / groups,
+		"peak": total_peak / groups,
+		"final_reaction": total_final / groups,
 		"tickets": tickets,
 		"gift": gift,
 		"costs": wages + overhead + marketing,

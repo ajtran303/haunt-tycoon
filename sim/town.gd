@@ -18,6 +18,10 @@ func demand() -> int:
 	return Night.demand_for(heard[0] if heard.size() > 0 else rep)
 
 
+func momentum() -> float:
+	return rep - (heard[0] if heard.size() > 0 else rep)
+
+
 func record_night(sat: float) -> void:
 	rep = Night.next_reputation(rep, sat)
 	if heard.size() > 0:
