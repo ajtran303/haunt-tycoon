@@ -174,11 +174,10 @@ func refresh() -> void:
 		strain = "actors sprinting between scares"
 	elif interval <= PACES["Brisk"]:
 		strain = "actors hustling"
-	%PaceLabel.text = "Line pace: up to %d groups, %s" % [
-		int(Night.NIGHT_SECONDS / interval),
+	%PaceLabel.text = "Line pace: up to %d visitors a night, %s" % [
+		int(Night.NIGHT_SECONDS / interval) * Night.GROUP_SIZE,
 		strain,
 	]
-
 	%BlueprintNote.visible = night == 1
 
 
