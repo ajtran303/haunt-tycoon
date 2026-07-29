@@ -202,16 +202,23 @@ func _night_tick(t: float, cash_before: float, visitors: int) -> void:
 
 
 func _night_finish(line: String) -> void:
+	%RunButton.disabled = false
+	%ResetButton.disabled = false
+
 	for b in %SlotRow.get_children():
 		b.modulate = Color.WHITE
 	%NightLog.append_text(line + "\n")
 	night += 1
+	if cash < -10_000.0:
+		%NightLog.append_text("[color=#ef5350]The bank calls your loan. Season over.[/color]\n")
+		%RunButton.text = "Bankrupt: $%.0f" % cash
+		%RunButton.disabled = true
+		refresh()
+		return
 	if night == 2:
 		%NightLog.append_text(
 			"[color=#8d99ae]Construction locked in. Rebuilding now costs full price, no refunds.[/color]\n"
 		)
-	%RunButton.disabled = false
-	%ResetButton.disabled = false
 	if night > Night.SEASON_NIGHTS:
 		%RunButton.text = "Season over: $%.0f" % cash
 		%RunButton.disabled = true
