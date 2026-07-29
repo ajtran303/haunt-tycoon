@@ -1,7 +1,7 @@
 const Night = preload("res://sim/night.gd")
 
 const WOM_DELAY := 3 # nights for word of mouth to circulate
-const STARTING_REP := 55.0 # a new haunt: unknown quantity, curiosity crowd
+const STARTING_REP := 50.0 # a new haunt: unknown quantity, curiosity crowd
 
 var rep: float
 var heard: Array[float] # what the town believes, oldest first

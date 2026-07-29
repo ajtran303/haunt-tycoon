@@ -13,9 +13,9 @@ const ACTORS_PER_SCARE := 2 # rotation: one on, one resetting
 const ACTORS_PER_SPECIALIST := 4 # one costumer or one makeup artist covers this many actors
 const SUPPORT_STAFF := 4 # queue, security, floaters
 const STAFF_WAGE := 200.0
-const ACTOR_WAGE := 300.0
+const ACTOR_WAGE := 350.0
 
-const NIGHTLY_OVERHEAD := 3_500.0 # rent, insurance, utilities, permits
+const NIGHTLY_OVERHEAD := 4_000.0 # rent, insurance, utilities, permits
 const MARKETING_PER_VISITOR := 2.5 # the industry's $2-3/head acquisition cost
 
 const BUILD_COST := {
@@ -34,7 +34,7 @@ const UPKEEP := {
 	"e": 150.0, # fog fluid, per the research ~$50-150/night is realistic
 }
 
-const GIFT_PER_ACTOR_HIT := 5.0
+const GIFT_PER_ACTOR_HIT := 4.0
 const CONCESSION_PER_MIN := 0.10 # not used yet
 
 const SAT_RAW_MIN := 22.0
@@ -46,7 +46,7 @@ const MIN_REACH := 0.025 # the trickle: floor of the curve
 const REP_DRIFT := 0.15 # how fast word of mouth moves: ~a week's memory
 
 const REP_DEAD := 30.0 # town fully writes you off
-const CURIOSITY_REACH := 0.12 # the rubbernecker crowd that still shows up at the floor
+const CURIOSITY_REACH := 0.08 # the rubbernecker crowd that still shows up at the floor
 
 const PEAK_WEIGHT := 0.65 # how much the best moment counts vs the ending
 
