@@ -57,7 +57,7 @@ text = "Reset"
 [node name="BlueprintNote" type="Label" parent="MarginContainer/VBoxContainer" unique_id=924075738]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Blueprint phase: swaps cost only the difference. Construction locks in when you open."
+text = "Blueprint phase: swaps cost only the difference. Construction costs full price when you open."
 
 [node name="ToolBar" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1289261478]
 unique_name_in_owner = true

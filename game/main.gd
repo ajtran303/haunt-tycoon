@@ -45,6 +45,8 @@ var capacity_hints := 0
 var wom_hints := 0
 var wom_direction := 0
 
+const FINAL_WEEK_NIGHT := 25 # WOM_DELAY + rep drift ≈ a week
+
 
 func _ready() -> void:
 	rng.randomize()
@@ -218,7 +220,11 @@ func _on_run_night() -> void:
 	if note != "":
 		line += " [color=#8d99ae]%s[/color]" % note
 	if sold_out:
-		line += " [color=#e0a458]Sold out! Line down the block.[/color]"
+		var turned_away: int = demand - r.groups * Night.GROUP_SIZE
+		line += " [color=#e0a458]Sold out! Turned away ~%d (about %s in tickets).[/color]" % [
+			turned_away,
+			money(turned_away * Night.TICKET_PRICE),
+		]
 		if interval > PACES["Packed"] and capacity_hints < 2:
 			capacity_hints += 1
 			line += " [color=#8d99ae]A faster line pace would admit more.[/color]"
@@ -228,7 +234,9 @@ func _on_run_night() -> void:
 		if dir != wom_direction:
 			wom_direction = dir
 			wom_hints = 0
-		if wom_hints < 2:
+		if dir < 0 and night >= FINAL_WEEK_NIGHT:
+			line += " [color=#8d99ae]Bad word is spreading, but the season ends before it matters.[/color]"
+		elif wom_hints < 2:
 			wom_hints += 1
 			line += " [color=#8d99ae]%s[/color]" % (
 				"Good word is getting around; expect bigger crowds in a few nights."
@@ -271,6 +279,10 @@ func _night_finish(line: String) -> void:
 	if night == 2:
 		%NightLog.append_text(
 			"[color=#8d99ae]The doors are open. You can still build any night; new rooms now cost full price, no refunds.[/color]\n"
+		)
+	if night == FINAL_WEEK_NIGHT:
+		%NightLog.append_text(
+			"[color=#8d99ae]Final week. Whatever the town says about you now, it won't get around before Halloween.[/color]\n"
 		)
 	if night > Night.SEASON_NIGHTS:
 		%RunButton.text = "Season over: %s" % money(cash)
