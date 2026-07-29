@@ -23,6 +23,10 @@ const TOOLS := {
 	Rooms.EFFECT: "Effect",
 }
 
+const PACES := { "Loose": 300.0, "Brisk": 200.0, "Packed": 120.0 }
+
+var interval: float = PACES["Loose"]
+
 var cash: float
 var night: int
 var layout: Array
@@ -30,15 +34,14 @@ var town
 var selected_tool: String = Rooms.SCARE
 var rng := RandomNumberGenerator.new()
 
+var capacity_hints := 0
+
 
 func _ready() -> void:
 	rng.randomize()
 	_build_toolbar()
 	_build_slot_row()
-	%PaceSlider.value_changed.connect(
-		func(_v):
-			refresh(),
-	)
+	_build_pace_bar()
 	%RunButton.pressed.connect(_on_run_night)
 	%ResetButton.pressed.connect(start_season)
 	start_season()
@@ -63,8 +66,25 @@ func _build_slot_row() -> void:
 	for i in ROOM_SLOTS:
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(64, 64)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(_on_slot_pressed.bind(i))
 		%SlotRow.add_child(b)
+
+
+func _build_pace_bar() -> void:
+	var pace_group := ButtonGroup.new()
+	for pace_name in PACES:
+		var b := Button.new()
+		b.toggle_mode = true
+		b.button_group = pace_group
+		b.text = pace_name
+		b.button_pressed = PACES[pace_name] == interval
+		b.pressed.connect(
+			func():
+				interval = PACES[pace_name]
+				refresh(),
+		)
+		%PaceBar.add_child(b)
 
 
 func slot_style(c: Color) -> StyleBoxFlat:
@@ -102,7 +122,10 @@ func _on_slot_pressed(i: int) -> void:
 
 func refresh() -> void:
 	%CashLabel.text = "$%.0f" % cash
-	%CashLabel.add_theme_color_override("font_color", Color.INDIAN_RED if cash < 0.0 else Color.WHITE)
+	%CashLabel.add_theme_color_override(
+		"font_color",
+		Color.INDIAN_RED if cash < 0.0 else Color.WHITE,
+	)
 	%NightLabel.text = "Oct %d" % night if night <= Night.SEASON_NIGHTS else "Season over"
 	if night == Night.SEASON_NIGHTS:
 		%NightLabel.text = "Halloween"
@@ -118,24 +141,50 @@ func refresh() -> void:
 	for b in %ToolBar.get_children():
 		b.disabled = Night.BUILD_COST[b.get_meta("type")] > cash
 
-	var interval: float = %PaceSlider.value
-	%PaceLabel.text = "group every %ds" % int(interval)
 	%CostPreview.text = "staff %d, $%.0f wages + upkeep tonight" % [
 		Night.staff_for(layout),
 		Night.wages_for(layout) + Night.upkeep_for(layout) + Night.NIGHTLY_OVERHEAD,
 	]
 
+	var strain := "actors fully reset"
+	if interval <= PACES["Packed"]:
+		strain = "actors sprinting between scares"
+	elif interval <= PACES["Brisk"]:
+		strain = "actors hustling"
+	%PaceLabel.text = "Line pace: up to %d groups, %s" % [
+		int(Night.NIGHT_SECONDS / interval),
+		strain,
+	]
+	
+	%BlueprintNote.visible = night == 1
+
 
 func _on_run_night() -> void:
-	var r: Dictionary = Night.run(layout, %PaceSlider.value, rng, town.demand())
+	var demand: int = town.demand()
+	var capacity := int(Night.NIGHT_SECONDS / interval)
+	var r: Dictionary = Night.run(layout, interval, rng, demand)
+	var sold_out: bool = demand / Night.GROUP_SIZE > capacity
 	cash += r.profit
 	town.record_night(r.satisfaction)
 	var color := "66bb6a" if r.profit >= 0.0 else "ef5350"
-	%NightLog.append_text(
-		"[b]Oct %d[/b]  %d visitors. %s [color=#%s]$%.0f[/color]\n"
-		% [night, r.groups * Night.GROUP_SIZE, crowd_word(r.satisfaction), color, r.profit]
-	)
+	var line := "[b]Oct %d[/b]  %d visitors. %s [color=#%s]$%.0f[/color]" % [
+		night,
+		r.groups * Night.GROUP_SIZE,
+		crowd_word(r.satisfaction),
+		color,
+		r.profit,
+	]
+	if sold_out:
+		line += " [color=#e0a458]Sold out! Line down the block.[/color]"
+		if interval > PACES["Packed"] and capacity_hints < 2:
+			capacity_hints += 1
+			line += " [color=#8d99ae]A faster line pace would admit more.[/color]"
+	%NightLog.append_text(line + "\n")
 	night += 1
+	if night == 2:
+		%NightLog.append_text(
+			"[color=#8d99ae]Construction locked in. Rebuilding now costs full price, no refunds.[/color]\n"
+		)
 	if night > Night.SEASON_NIGHTS:
 		%RunButton.text = "Season over: $%.0f" % cash
 		%RunButton.disabled = true

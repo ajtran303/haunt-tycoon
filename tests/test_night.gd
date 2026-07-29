@@ -41,7 +41,7 @@ func _sweep(layout: Array, demand: int, rng: RandomNumberGenerator) -> void:
 		var separation := layout.size() / inside
 
 		if separation < Night.MIN_SEPARATION:
-			print("%8d | %.1f groups inside — too tight, skipped" % [interval, inside])
+			print("%8d | %.1f groups inside! Too tight, skipped" % [interval, inside])
 			continue
 
 		var r: Dictionary = Night.run(layout, float(interval), rng, demand)
