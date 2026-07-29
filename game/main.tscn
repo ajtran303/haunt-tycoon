@@ -36,7 +36,7 @@ text = "Haunt Tycoon (prototype)"
 
 [node name="GameDescription" type="Label" parent="MarginContainer/VBoxContainer/TitleBar" unique_id=1212553690]
 layout_mode = 2
-text = "Build your haunt, survive October, make the most money by Halloween. Don't go bankrupt."
+text = "Build your haunt, survive October, make the most money by Halloween. Don't let the bank call your loan at -$10,000."
 
 [node name="TopBar" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=519549004]
 layout_mode = 2

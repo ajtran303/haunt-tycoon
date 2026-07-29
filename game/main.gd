@@ -5,6 +5,7 @@ const Town = preload("res://sim/town.gd")
 const Rooms = preload("res://sim/rooms.gd")
 
 const STARTING_CASH := 45_000.0
+const LOAN_LIMIT := -10_000.0
 const ROOM_SLOTS := 10
 
 const ROOM_COLORS := {
@@ -239,7 +240,7 @@ func _night_finish(line: String) -> void:
 		b.modulate = Color.WHITE
 	%NightLog.append_text(line + "\n")
 	night += 1
-	if cash < -10_000.0:
+	if cash < LOAN_LIMIT:
 		%NightLog.append_text("[color=#ef5350]The bank calls your loan. Season over.[/color]\n")
 		%RunButton.text = "Bankrupt: $%.0f" % cash
 		%RunButton.disabled = true
