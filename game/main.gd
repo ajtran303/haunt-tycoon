@@ -75,6 +75,8 @@ func _on_slot_pressed(i: int) -> void:
 	if layout[i] == selected_tool:
 		return
 	var cost: float = Night.BUILD_COST[selected_tool]
+	if night == 1:
+		cost -= Night.BUILD_COST[layout[i]] # blueprint phase: swap refunds the old room
 	if cost > cash:
 		return
 	cash -= cost
