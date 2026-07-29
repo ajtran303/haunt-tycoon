@@ -123,6 +123,9 @@ func start_season() -> void:
 	interval = PACES["Loose"]
 	for b in %PaceBar.get_children():
 		b.button_pressed = b.get_meta("interval") == interval
+	selected_tool = Rooms.SCARE
+	for b in %ToolBar.get_children():
+		b.button_pressed = b.get_meta("type") == selected_tool
 	refresh()
 
 
@@ -203,7 +206,7 @@ func _on_run_night() -> void:
 	var sold_out: bool = demand / Night.GROUP_SIZE > capacity
 	town.record_night(r.satisfaction)
 	var color := "66bb6a" if r.profit >= 0.0 else "ef5350"
-	var line := "[b]Oct %d[/b]  %d visitors × $%.0f tickets + $%.0f gifts − $%.0f costs = [color=#%s]%s[/color]. %s" % [
+	var line := "[b]Oct %d[/b]  %d visitors × $%.0f tickets + $%.0f souvenirs, photos & merch − $%.0f costs = [color=#%s]%s[/color]. %s" % [
 		night,
 		r.groups * Night.GROUP_SIZE,
 		Night.TICKET_PRICE,
@@ -269,7 +272,7 @@ func _night_finish(line: String) -> void:
 		return
 	if night == 2:
 		%NightLog.append_text(
-			"[color=#8d99ae]Construction locked in. Rebuilding now costs full price, no refunds.[/color]\n"
+			"[color=#8d99ae]The doors are open. You can still build any night; new rooms now cost full price, no refunds.[/color]\n"
 		)
 	if night > Night.SEASON_NIGHTS:
 		%RunButton.text = "Season over: %s" % money(cash)
