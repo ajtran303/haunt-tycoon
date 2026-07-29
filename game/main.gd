@@ -32,6 +32,12 @@ const TOOL_TIPS := {
 
 const PACES := { "Loose": 300.0, "Brisk": 200.0, "Packed": 120.0 }
 
+const PACE_TIPS := {
+	"Loose": "Actors fully reset between groups.\nBest scares, fewest visitors.",
+	"Brisk": "A quicker line. Actors cut corners;\na few scares suffer.",
+	"Packed": "Admits everyone in line. Rushed actors\nscare worse, and the town notices.",
+}
+
 var interval: float = PACES["Loose"]
 
 var cash: float
@@ -88,6 +94,7 @@ func _build_pace_bar() -> void:
 	for pace_name in PACES:
 		var b := Button.new()
 		b.set_meta("interval", PACES[pace_name])
+		b.tooltip_text = PACE_TIPS[pace_name]
 		b.toggle_mode = true
 		b.button_group = pace_group
 		b.text = pace_name
@@ -234,9 +241,7 @@ func _on_run_night() -> void:
 		if dir != wom_direction:
 			wom_direction = dir
 			wom_hints = 0
-		if dir < 0 and night >= FINAL_WEEK_NIGHT:
-			line += " [color=#8d99ae]Bad word is spreading, but the season ends before it matters.[/color]"
-		elif wom_hints < 2:
+		if wom_hints < 2 and not (dir < 0 and night >= FINAL_WEEK_NIGHT):
 			wom_hints += 1
 			line += " [color=#8d99ae]%s[/color]" % (
 				"Good word is getting around; expect bigger crowds in a few nights."
@@ -303,9 +308,17 @@ func crowd_word(sat: float) -> String:
 
 
 func night_note(r: Dictionary) -> String:
+	var visitors: int = r.groups * Night.GROUP_SIZE
+	var per_visitor: float = Night.TICKET_PRICE + r.gift / visitors - Night.MARKETING_PER_VISITOR
+	var fixed := Night.wages_for(layout) + Night.upkeep_for(layout) + Night.NIGHTLY_OVERHEAD
+	var break_even := ceili(fixed / per_visitor)
+	var pace_cap := int(Night.NIGHT_SECONDS / interval) * Night.GROUP_SIZE
+
 	if r.satisfaction >= 60.0:
 		if r.profit < 0.0:
-			return "They loved it; there just weren't enough of them to pay for all this."
+			if break_even > pace_cap:
+				return "They loved it, but even a sold-out night at this pace can't cover these costs."
+			return "They loved it; word just hasn't gotten around. About %d visitors a night would pay for all this." % break_even
 		return ""
 	if interval <= PACES["Packed"]:
 		return "The actors run ragged at this pace."
