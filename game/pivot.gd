@@ -2,8 +2,12 @@ extends Control
 
 const Allocation = preload("res://sim/allocation.gd")
 const Night = preload("res://sim/night.gd")
+const Town = preload(("res://sim/town.gd"))
 
 const STEP := 500.0
+const MARKETING_CAP := floorf(
+	(Allocation.MAX_STARTING_REP - Town.STARTING_REP) * Allocation.DOLLARS_PER_REP / STEP
+) * STEP # $11,000: last step before rep pins at 78
 
 const KNOBS := [
 	{ key = "build", label = "Build" },
@@ -37,12 +41,12 @@ func _ready() -> void:
 
 func _build_rows() -> void:
 	for knob in KNOBS:
-		var row := HBoxContainer.new()
 		var name_label := Label.new()
 		name_label.text = knob.label
 		name_label.custom_minimum_size.x = 110
 		var slider := HSlider.new()
 		slider.max_value = Night.STARTING_CASH
+		slider.custom_minimum_size.x = 300
 		slider.step = STEP
 		slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		slider.value_changed.connect(
@@ -50,11 +54,11 @@ func _build_rows() -> void:
 				_refresh(),
 		)
 		var effect := Label.new()
-		effect.custom_minimum_size.x = 340
-		row.add_child(name_label)
-		row.add_child(slider)
-		row.add_child(effect)
-		%KnobRows.add_child(row)
+		effect.custom_minimum_size.x = 420
+		effect.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		%KnobRows.add_child(name_label)
+		%KnobRows.add_child(slider)
+		%KnobRows.add_child(effect)
 		sliders[knob.key] = slider
 		effects[knob.key] = effect
 		match knob.key:
@@ -64,6 +68,8 @@ func _build_rows() -> void:
 			"depth":
 				slider.max_value = floorf(Night.STARTING_CASH / Allocation.SPARE_COST) # 9 bench slots
 				slider.step = 1
+			"marketing":
+				slider.max_value = MARKETING_CAP
 			_:
 				slider.max_value = Night.STARTING_CASH
 				slider.step = STEP
@@ -91,38 +97,39 @@ func _refresh() -> void:
 
 	effects["build"].text = rung_text(a.build)
 	effects["quality"].text = (
-		"signs mostly %s talent"
-		% skill_word(minf(a.quality / Allocation.HIRE_TIER_DOLLARS, 1.0) * 10.0)
+		"$0 — takes whoever answers the flyer"
+		if a.quality == 0.0
+		else "%s — signs mostly %s talent"
+		% [money(a.quality), skill_word(minf(a.quality / Allocation.HIRE_TIER_DOLLARS, 1.0) * 10.0)]
 	)
 	effects["depth"].text = spares_text(a.depth)
 	effects["marketing"].text = (
-		"opening reputation %.0f" % Allocation.starting_rep_for(a.marketing)
+		"%s — opening reputation %.0f"
+		% [money(a.marketing), Allocation.starting_rep_for(a.marketing)]
 	)
 
 
 func spares_text(budget: float) -> String:
 	var spares := Allocation.spares_for(budget)
-	var text := (
-		"no spare actors"
-		if spares == 0
-		else "bench: %d on-call actor%s ($%.0f/night when idle)"
-		% [spares, "s" if spares > 1 else "", Allocation.ON_CALL_WAGE]
-	)
-	if budget < Night.STARTING_CASH:
-		text += " — next spare at $%d" % int((spares + 1) * Allocation.SPARE_COST)
-	return text
+	if spares == 0:
+		return "no bench"
+	return "bench: %d on call ($%.0f/night idle)" % [spares, Allocation.ON_CALL_WAGE]
 
 
 func rung_text(budget: float) -> String:
 	var layout := Allocation.layout_for(budget)
-	var text := "%d scare rooms" % layout.count("a")
-	var anims: int = layout.count("n")
-	if anims > 0:
-		text += " + %d animatronic%s" % [anims, "s" if anims > 1 else ""]
-	text += " ($%d)" % int(Night.build_cost_for(layout))
+	var text: String
+	if layout.count("a") == 0:
+		text = "corridor shell, no scares ($%d)" % int(Night.build_cost_for(layout))
+	else:
+		text = "%d scare rooms" % layout.count("a")
+		var anims: int = layout.count("n")
+		if anims > 0:
+			text += " + %d animatronic%s" % [anims, "s" if anims > 1 else ""]
+		text += " ($%d)" % int(Night.build_cost_for(layout))
 	for rung in Allocation.BUILD_LADDER:
 		if rung[0] > budget:
-			return text + " (next tier at $%d)" % int(rung[0])
+			return text + " — next: %d scares ($%d)" % [rung[1].count("a"), int(rung[0])]
 	return text
 
 

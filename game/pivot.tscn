@@ -37,9 +37,10 @@ text = "Haunt Tycoon (prototype)"
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="KnobRows" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=39306381]
+[node name="KnobRows" type="GridContainer" parent="MarginContainer/VBoxContainer" unique_id=988310826]
 unique_name_in_owner = true
 layout_mode = 2
+columns = 3
 
 [node name="ReserveLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=231546104]
 unique_name_in_owner = true

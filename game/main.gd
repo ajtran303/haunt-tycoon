@@ -153,6 +153,7 @@ func _build_callout_banner() -> void:
 		func():
 			_choose_policy(Casting.REASSIGN),
 	)
+	%PullButton.text = "Consolidate rooms"
 
 
 func _build_roster_strip() -> void:
@@ -352,11 +353,17 @@ func _on_run_night() -> void:
 
 	if pending_absent.is_empty():
 		var absent := Roster.roll_callouts(roster, callout_rng)
-		if not absent.is_empty():
+		var headcount := mini(Night.actors_for(layout), roster.size())
+		var performer_out := false
+		for i in absent:
+			if i < headcount:
+				performer_out = true
+		if not absent.is_empty() and performer_out:
 			pending_absent = absent
 			_show_banner()
 			return
-		pending_policy = Casting.REASSIGN # routine board: consolidate structural holes
+		pending_absent = absent # bench-only: no question, but counts still accrue
+		pending_policy = Casting.REASSIGN
 	_resolve_and_run(demand)
 
 
@@ -498,19 +505,28 @@ func _preview_board() -> void:
 		b.add_theme_stylebox_override("hover", slot_style(ROOM_COLORS[room].lightened(0.15)))
 		b.add_theme_stylebox_override("pressed", slot_style(ROOM_COLORS[room].darkened(0.15)))
 		if room != layout[i]:
-			b.text = "%s\ndark" % TOOLS[room].to_upper()
+			if room == Rooms.CORRIDOR:
+				b.text = "%s\ndark" % TOOLS[room].to_upper()
+			else:
+				b.text = "%s\nshorthanded" % TOOLS[room].to_upper()
 
 
 func _show_banner() -> void:
+	var assignment: Dictionary = Casting.auto_assign(layout)
+	var room_of := { }
+	for room_i in assignment:
+		for ai in assignment[room_i]:
+			room_of[ai] = room_i
+
 	var lines := []
 	for i in pending_absent:
 		var a: Dictionary = roster[i]
-		var nth: int = a.observed_callouts + 1 # tonight's isn't counted until the night runs
+		var nth: int = a.observed_callouts + 1
+		var called := "%s called out." % a.name
 		if nth > 1:
-			lines.append("%s called out again, %s time this month" % [a.name, ordinal(nth)])
-		else:
-			lines.append("%s called out" % a.name)
-	%BannerLabel.text = ". ".join(lines) + "."
+			called = "%s called out again, %s time this month." % [a.name, ordinal(nth)]
+		lines.append(called + " " + consequence(i, room_of, assignment))
+	%BannerLabel.text = " ".join(lines)
 
 	var headcount := mini(Night.actors_for(layout), roster.size())
 	var bench_free := 0
@@ -522,10 +538,57 @@ func _show_banner() -> void:
 		if i < headcount:
 			performer_holes += 1
 
+	var next_up := ""
+	for i in range(headcount, roster.size()):
+		if not pending_absent.has(i):
+			next_up = roster[i].name
+			break
+
 	%BenchButton.disabled = bench_free == 0
-	%PullButton.disabled = maxi(performer_holes - bench_free, 0) < 2
+	%BenchButton.text = "Send in %s" % next_up if next_up != "" else "Send the bench"
+	%BenchButton.tooltip_text = (
+		"No one on call — cast depth buys a bench in pre-season."
+		if bench_free == 0
+		else "%s steps into the empty spot at full wage." % next_up
+	)
+
+	var half_rooms := 0
+	var bench_left := bench_free
+	var rooms := assignment.keys()
+	rooms.sort()
+	rooms.reverse() # bench fills late rooms first, same as fill_from_bench
+	for room_i in rooms:
+		if layout[room_i] != Rooms.SCARE:
+			continue
+		var present := 0
+		for ai in assignment[room_i]:
+			if ai < roster.size() and not pending_absent.has(ai):
+				present += 1
+		var fill := mini(Night.ACTORS_PER_SCARE - present, bench_left)
+		bench_left -= fill
+		if present + fill == 1:
+			half_rooms += 1
+	%PullButton.disabled = half_rooms < 2
+	%PullButton.tooltip_text = (
+		"Needs two half-staffed rooms to merge into one."
+		if %PullButton.disabled
+		else "Close the earlier hole and move its actor to fill the later one."
+	)
 	%DarkButton.button_pressed = true
 	pending_policy = Casting.NEVER
+
+	var never_board: Dictionary = Casting.resolve(layout, roster, pending_absent, Casting.NEVER)
+	var goes_dark := false
+	for i in layout.size():
+		if Casting.needs_for(layout[i]) > 0 and never_board.layout[i] == Rooms.CORRIDOR:
+			goes_dark = true
+	%DarkButton.text = "Leave it dark" if goes_dark else "Play on short"
+	%DarkButton.tooltip_text = (
+		"Accept the hole; that room plays as a corridor tonight."
+		if goes_dark
+		else "Accept it; the scene runs without the full cast."
+	)
+
 	_preview_board()
 
 	%CalloutBanner.visible = true
@@ -614,3 +677,20 @@ func _rebuild_roster() -> void:
 	var headcount := Night.actors_for(layout)
 	roster = Roster.auto_hire(Roster.pool(roster_rng, headcount + bench, tier), headcount, bench)
 	_build_roster_strip()
+
+
+func consequence(actor_i: int, room_of: Dictionary, assignment: Dictionary) -> String:
+	if not room_of.has(actor_i):
+		return "They were on call; the board holds."
+	var room_i: int = room_of[actor_i]
+	var present := 0
+	for ai in assignment[room_i]:
+		if ai < roster.size() and not pending_absent.has(ai):
+			present += 1
+	if layout[room_i] == Rooms.PAIR_SCARE:
+		if present >= Night.ACTORS_PER_SCARE:
+			return "The scene plays on, smaller."
+		return "The scene can't run."
+	if present == 0:
+		return "Both actors out; the room stands empty."
+	return "No partner to run the rotation, so the room can't open."

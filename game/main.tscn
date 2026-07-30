@@ -96,24 +96,24 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/CalloutBanner" unique_id=606846032]
+[node name="HFlowContainer" type="HFlowContainer" parent="MarginContainer/VBoxContainer/CalloutBanner" unique_id=1215678614]
 layout_mode = 2
 
-[node name="BannerLabel" type="Label" parent="MarginContainer/VBoxContainer/CalloutBanner/HBoxContainer" unique_id=820326820]
+[node name="BannerLabel" type="Label" parent="MarginContainer/VBoxContainer/CalloutBanner/HFlowContainer" unique_id=820326820]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="BenchButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HBoxContainer" unique_id=592902413]
-unique_name_in_owner = true
-layout_mode = 2
-toggle_mode = true
-
-[node name="PullButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HBoxContainer" unique_id=1124511871]
+[node name="BenchButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HFlowContainer" unique_id=592902413]
 unique_name_in_owner = true
 layout_mode = 2
 toggle_mode = true
 
-[node name="DarkButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HBoxContainer" unique_id=2031336073]
+[node name="PullButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HFlowContainer" unique_id=1124511871]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+
+[node name="DarkButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HFlowContainer" unique_id=2031336073]
 unique_name_in_owner = true
 layout_mode = 2
 toggle_mode = true
