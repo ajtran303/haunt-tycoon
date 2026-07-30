@@ -5,6 +5,7 @@ const Rooms = preload("res://sim/rooms.gd")
 const Walkthrough = preload("res://sim/walkthrough.gd")
 const Calendar = preload("res://sim/calendar.gd")
 const Roster = preload("res://sim/roster.gd")
+const Casting = preload("res://sim/casting.gd")
 
 const ROOMS := 10
 const SCARE_MARGINAL := 1_500.0 # BUILD_COST.a - BUILD_COST.g
@@ -15,8 +16,8 @@ const MAX_SCARES := 6
 const DOLLARS_PER_CEILING_POINT := 1_500.0
 const MAX_CEILING_BONUS := 10.0
 
-const CALLOUT_CHANCE := 0.08 # per scare room per night
 const SPARE_COST := 5_000.0 # season retainer, ~half a full wage run
+const ON_CALL_WAGE := 175.0
 
 const DOLLARS_PER_REP := 400.0
 const MAX_STARTING_REP := 78.0 # stays under REP_FULL_REACH (82)
@@ -40,29 +41,36 @@ static func opening_cash(alloc: Dictionary) -> float:
 			- alloc.marketing
 
 
-static func run_season(alloc: Dictionary, seed_val: int) -> Array[Dictionary]:
+static func run_season(
+	alloc: Dictionary,
+	seed_val: int,
+	policy: int = Casting.REASSIGN,
+	callouts: bool = true,
+) -> Array[Dictionary]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_val
 	var callout_rng := RandomNumberGenerator.new()
 	callout_rng.seed = seed_val + 100_000
+	var roster_rng := RandomNumberGenerator.new()
+	roster_rng.seed = seed_val + 300_000
 
 	var layout := layout_for(alloc.build)
-	var bonus := ceiling_bonus_for(alloc.quality)
-	var spares := spares_for(alloc.depth)
+	var roster := roster_for(alloc, roster_rng)
+	var headcount := Night.actors_for(layout)
 	var town := Town.new(starting_rep_for(alloc.marketing))
 
 	var cash: float = Night.STARTING_CASH \
 			- Night.build_cost_for(layout) \
 			- alloc.quality \
-			- spares * SPARE_COST \
 			- alloc.marketing
 
 	var trajectory: Array[Dictionary] = []
-
 	var weather := Calendar.roll_season(seed_val)
 
 	for night in Night.SEASON_NIGHTS:
-		var tonight := with_callouts(layout, spares, callout_rng)
+		var absent: Array = Roster.roll_callouts(roster, callout_rng) if callouts else []
+		var board: Dictionary = Casting.resolve(layout, roster, absent, policy)
+		var tonight: Array = board.layout
 
 		var demand := int(
 			town.demand() * Calendar.weight_for(night + 1) * Calendar.WEATHER[weather[night]].mult
@@ -74,8 +82,13 @@ static func run_season(alloc: Dictionary, seed_val: int) -> Array[Dictionary]:
 		if is_dark_night:
 			cash -= Night.NIGHTLY_OVERHEAD
 		else:
-			var loose_cap := int(Night.NIGHT_SECONDS / Night.LOOSE_INTERVAL) * Night.GROUP_SIZE # 540
+			for i in absent:
+				roster[i].observed_callouts += 1
+			var loose_cap := int(Night.NIGHT_SECONDS / Night.LOOSE_INTERVAL) * Night.GROUP_SIZE
 			var interval := Night.PACKED_INTERVAL if demand > loose_cap else Night.LOOSE_INTERVAL
+			var bonus_row: Array = []
+			for c in board.ceilings:
+				bonus_row.append(effective_bonus(c, interval))
 			var r: Dictionary = Night.run(
 				tonight,
 				interval,
@@ -83,9 +96,11 @@ static func run_season(alloc: Dictionary, seed_val: int) -> Array[Dictionary]:
 				demand,
 				Walkthrough.PRIME_SCALE,
 				"",
-				effective_bonus(bonus, interval),
+				0.0,
+				bonus_row,
 			)
-			cash += r.profit
+			cash += r.profit - (roster_wages(roster, headcount, absent, policy)
+			- Night.wages_for(tonight))
 			town.record_night(r.satisfaction)
 			revenue = r.tickets + r.gift
 
@@ -117,18 +132,6 @@ static func starting_rep_for(marketing: float) -> float:
 	return minf(Town.STARTING_REP + marketing / DOLLARS_PER_REP, MAX_STARTING_REP)
 
 
-static func with_callouts(layout: Array, spares: int, rng: RandomNumberGenerator) -> Array:
-	var tonight := layout.duplicate()
-	var available := spares
-	for i in tonight.size():
-		if tonight[i] == Rooms.SCARE and rng.randf() < CALLOUT_CHANCE:
-			if available > 0:
-				available -= 1
-			else:
-				tonight[i] = Rooms.CORRIDOR
-	return tonight
-
-
 static func effective_bonus(bonus: float, interval: float) -> float:
 	var t := clampf(
 		(interval - Night.PACKED_INTERVAL) / (Night.LOOSE_INTERVAL - Night.PACKED_INTERVAL),
@@ -151,3 +154,23 @@ static func roster_for(alloc: Dictionary, rng: RandomNumberGenerator) -> Array[D
 	var bench := spares_for(alloc.depth)
 	var tier := minf(alloc.quality / HIRE_TIER_DOLLARS, 1.0)
 	return Roster.auto_hire(Roster.pool(rng, headcount + bench, tier), headcount, bench)
+
+
+static func roster_wages(
+	roster: Array[Dictionary],
+	headcount: int,
+	absent: Array,
+	policy: int,
+) -> float:
+	var absent_performers := 0
+	var absent_bench := 0
+	for i in absent:
+		if i < headcount:
+			absent_performers += 1
+		else:
+			absent_bench += 1
+	var present_bench := roster.size() - headcount - absent_bench
+	var bench_used := mini(absent_performers, present_bench) if policy == Casting.REASSIGN else 0
+	return (headcount - absent_performers + bench_used) * Night.ACTOR_WAGE \
+			+ (present_bench - bench_used) * ON_CALL_WAGE \
+			+ (Night.specialists_for(headcount) + Night.SUPPORT_STAFF) * Night.STAFF_WAGE

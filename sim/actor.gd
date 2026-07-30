@@ -2,9 +2,11 @@ const Night = preload("res://sim/night.gd")
 
 const SKILL_SPREAD := 1.5
 
-# 60% steady, 30% average, 10% flaky. Mean 0.039; two-actor room ≈ 7.8%,
-# matching the old 8% CALLOUT_CHANCE per scare room.
-const RELIABILITY := [[0.60, 0.02], [0.90, 0.05], [1.0, 0.12]]
+# Shares, not thresholds: every pool gets this composition exactly via
+# Roster.reliability_quota; the rng only shuffles who gets which chance.
+# 8-actor roster: 5 @ 0.02 + 2 @ 0.05 + 1 @ 0.12 = 0.32 expected callouts
+# per night, matching the old 4 scare rooms x 8% CALLOUT_CHANCE.
+const RELIABILITY := [[0.60, 0.02], [0.30, 0.05], [0.10, 0.12]]
 
 const FIRST := [
 	"Marcus",
@@ -56,23 +58,14 @@ const LAST := [
 static func make(rng: RandomNumberGenerator, tier: float) -> Dictionary:
 	var full_name := pick_name(rng)
 	var skill := clampf(rng.randfn(tier * 10.0, SKILL_SPREAD), 0.0, 10.0)
-	var callout_chance := roll_reliability(rng)
 	return {
 		name = full_name,
 		skill = skill,
 		wage = Night.ACTOR_WAGE,
-		callout_chance = callout_chance,
+		callout_chance = 0.0,
 		observed_callouts = 0,
 	}
 
 
 static func pick_name(rng: RandomNumberGenerator) -> String:
 	return "%s %s" % [FIRST[rng.randi() % FIRST.size()], LAST[rng.randi() % LAST.size()]]
-
-
-static func roll_reliability(rng: RandomNumberGenerator) -> float:
-	var r := rng.randf()
-	for bucket in RELIABILITY:
-		if r < bucket[0]:
-			return bucket[1]
-	return RELIABILITY[-1][1]

@@ -15,20 +15,29 @@ static func needs_for(room: String) -> int:
 			return 0
 
 
-# Best skill to late rooms. Roster is sorted descending, so walk rooms
-# back-to-front handing out roster indices 0, 1, 2, ...
+# Anchor pairing: best with worst, second-best with second-worst, so every
+# room's mean skill sits near the roster mean (matches the old uniform bonus).
 static func auto_assign(layout: Array) -> Dictionary:
-	var assignment := { }
-	var next := 0
-	for i in range(layout.size() - 1, -1, -1):
+	var rooms := []
+	var total := 0
+	for i in layout.size():
 		var need := needs_for(layout[i])
-		if need == 0:
-			continue
+		if need > 0:
+			rooms.append(i)
+			total += need
+	var assignment := { }
+	var lo := 0
+	var hi := total - 1
+	for room_i in rooms:
 		var actors := []
-		for j in need:
-			actors.append(next)
-			next += 1
-		assignment[i] = actors
+		for j in needs_for(layout[room_i]):
+			if j % 2 == 0:
+				actors.append(lo)
+				lo += 1
+			else:
+				actors.append(hi)
+				hi -= 1
+		assignment[room_i] = actors
 	return assignment
 
 
