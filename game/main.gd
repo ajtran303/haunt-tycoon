@@ -3,6 +3,7 @@ extends Control
 const Night = preload("res://sim/night.gd")
 const Town = preload("res://sim/town.gd")
 const Rooms = preload("res://sim/rooms.gd")
+const Allocation = preload("res://sim/allocation.gd")
 
 const ROOM_SLOTS := 10
 
@@ -116,11 +117,17 @@ func slot_style(c: Color) -> StyleBoxFlat:
 
 func start_season() -> void:
 	night = 1
-	layout = []
-	for i in ROOM_SLOTS:
-		layout.append(Rooms.CORRIDOR)
-	town = Town.new()
-	cash = Night.STARTING_CASH - Night.build_cost_for(layout)
+	if not GameState.alloc.is_empty():
+		var a: Dictionary = GameState.alloc
+		layout = Allocation.layout_for(a.build)
+		town = Town.new(Allocation.starting_rep_for(a.marketing))
+		cash = Allocation.opening_cash(a)
+	else:
+		layout = []
+		for i in ROOM_SLOTS:
+			layout.append(Rooms.CORRIDOR)
+		town = Town.new()
+		cash = Night.STARTING_CASH - Night.build_cost_for(layout)
 	capacity_hints = 0
 	wom_hints = 0
 	wom_direction = 0

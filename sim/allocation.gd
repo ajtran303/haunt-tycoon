@@ -29,6 +29,14 @@ const BUILD_LADDER := [
 ]
 
 
+static func opening_cash(alloc: Dictionary) -> float:
+	return Night.STARTING_CASH \
+		- Night.build_cost_for(layout_for(alloc.build)) \
+		- alloc.quality \
+		- spares_for(alloc.depth) * SPARE_COST \
+		- alloc.marketing
+
+
 static func run_season(alloc: Dictionary, seed_val: int) -> Array[float]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_val

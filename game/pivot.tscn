@@ -1,0 +1,63 @@
+[gd_scene format=3 uid="uid://cehumvasqvadg"]
+
+[ext_resource type="Script" uid="uid://bgsaf0rq0dl86" path="res://game/pivot.gd" id="1_3pjfo"]
+
+[node name="Pivot" type="Control" unique_id=1150231330]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_3pjfo")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=469618967]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1851446749]
+layout_mode = 2
+
+[node name="TitleBar" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1926715159]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="MarginContainer/VBoxContainer/TitleBar" unique_id=1698448847]
+layout_mode = 2
+text = "Haunt Tycoon (prototype)"
+
+[node name="Description" type="Label" parent="MarginContainer/VBoxContainer/TitleBar" unique_id=1756475868]
+layout_mode = 2
+text = "Pre-season: split your $45,000"
+
+[node name="KnobRows" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=39306381]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ReserveLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=231546104]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RunButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=919034787]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Simulate season"
+
+[node name="StartButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=102501838]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Start October"
+
+[node name="SeasonLog" type="RichTextLabel" parent="MarginContainer/VBoxContainer" unique_id=1884966447]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_following = true
