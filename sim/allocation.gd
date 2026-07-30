@@ -4,6 +4,7 @@ const Town = preload("res://sim/town.gd")
 const Rooms = preload("res://sim/rooms.gd")
 const Walkthrough = preload("res://sim/walkthrough.gd")
 const Calendar = preload("res://sim/calendar.gd")
+const Roster = preload("res://sim/roster.gd")
 
 const ROOMS := 10
 const SCARE_MARGINAL := 1_500.0 # BUILD_COST.a - BUILD_COST.g
@@ -19,6 +20,7 @@ const SPARE_COST := 5_000.0 # season retainer, ~half a full wage run
 
 const DOLLARS_PER_REP := 400.0
 const MAX_STARTING_REP := 78.0 # stays under REP_FULL_REACH (82)
+const HIRE_TIER_DOLLARS := DOLLARS_PER_CEILING_POINT * MAX_CEILING_BONUS # 15_000
 
 const CASH_OUT_DAY := 25 # sim's known-good packing window is interior, ~day 24-27
 
@@ -67,7 +69,7 @@ static func run_season(alloc: Dictionary, seed_val: int) -> Array[Dictionary]:
 		)
 
 		var is_dark_night := is_dark(tonight, demand, night + 1)
-		
+
 		var revenue := 0.0
 		if is_dark_night:
 			cash -= Night.NIGHTLY_OVERHEAD
@@ -142,3 +144,10 @@ static func is_dark(tonight: Array, demand: int, night: int) -> bool: # night is
 	var marginal := Night.wages_for(tonight) + Night.upkeep_for(tonight)
 	return not must_open \
 			and demand * (Night.TICKET_PRICE - Night.MARKETING_PER_VISITOR) < marginal
+
+
+static func roster_for(alloc: Dictionary, rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var headcount := Night.actors_for(layout_for(alloc.build))
+	var bench := spares_for(alloc.depth)
+	var tier := minf(alloc.quality / HIRE_TIER_DOLLARS, 1.0)
+	return Roster.auto_hire(Roster.pool(rng, headcount + bench, tier), headcount, bench)
