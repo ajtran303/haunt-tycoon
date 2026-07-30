@@ -34,9 +34,8 @@ layout_mode = 2
 text = "Haunt Tycoon (prototype)"
 
 [node name="Description" type="Label" parent="MarginContainer/VBoxContainer/TitleBar" unique_id=1756475868]
+unique_name_in_owner = true
 layout_mode = 2
-text = "Build your haunt, survive October, make the most money by Halloween. Don't let the bank call your loan at -$12,500.
-Pre-season: split your $45,000"
 
 [node name="KnobRows" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=39306381]
 unique_name_in_owner = true

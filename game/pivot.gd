@@ -19,12 +19,19 @@ var effects := { }
 
 
 func _ready() -> void:
+	%Description.text = (
+		"Build your haunt, survive October, make the most money by Halloween. Don't let the bank call your loan at %s.\n"
+		% money(Night.LOAN_LIMIT)
+		+ "Pre-season: split your budget."
+	)
 	_build_rows()
 	%RunButton.pressed.connect(_on_run)
 	%StartButton.pressed.connect(_on_start_october)
 	if not GameState.alloc.is_empty():
-		for key in sliders:
-			sliders[key].value = GameState.alloc[key]
+		sliders["build"].value = rung_index(GameState.alloc.build)
+		sliders["quality"].value = GameState.alloc.quality
+		sliders["depth"].value = GameState.alloc.depth / Allocation.SPARE_COST
+		sliders["marketing"].value = GameState.alloc.marketing
 	_refresh()
 
 
@@ -50,13 +57,23 @@ func _build_rows() -> void:
 		%KnobRows.add_child(row)
 		sliders[knob.key] = slider
 		effects[knob.key] = effect
+		match knob.key:
+			"build":
+				slider.max_value = Allocation.BUILD_LADDER.size() # 0 = corridor shell, 1-4 = rungs
+				slider.step = 1
+			"depth":
+				slider.max_value = floorf(Night.STARTING_CASH / Allocation.SPARE_COST) # 9 bench slots
+				slider.step = 1
+			_:
+				slider.max_value = Night.STARTING_CASH
+				slider.step = STEP
 
 
 func alloc() -> Dictionary:
 	return {
-		build = sliders["build"].value,
+		build = rung_dollars(int(sliders["build"].value)),
 		quality = sliders["quality"].value,
-		depth = sliders["depth"].value,
+		depth = sliders["depth"].value * Allocation.SPARE_COST,
 		marketing = sliders["marketing"].value,
 	}
 
@@ -148,3 +165,15 @@ func skill_word(skill: float) -> String:
 		if skill < band[0]:
 			return band[1]
 	return SKILL_WORDS[-1][1]
+
+
+func rung_dollars(i: int) -> float:
+	return Allocation.BASE_BUILD if i == 0 else Allocation.BUILD_LADDER[i - 1][0]
+
+
+func rung_index(dollars: float) -> int:
+	var idx := 0
+	for i in Allocation.BUILD_LADDER.size():
+		if Allocation.BUILD_LADDER[i][0] <= dollars:
+			idx = i + 1
+	return idx
