@@ -123,6 +123,12 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Run Night"
 
+[node name="OpenAnywayButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=1228054200]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Open Anyway"
+
 [node name="NightLog" type="RichTextLabel" parent="MarginContainer/VBoxContainer" unique_id=2030361411]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 140)

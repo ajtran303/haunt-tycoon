@@ -79,6 +79,8 @@ var pending_policy := Casting.NEVER
 
 const SKILL_WORDS := [[4.0, "green"], [7.0, "solid"], [9.0, "strong"], [999.0, "headliner"]]
 
+var force_open := false
+
 
 func _ready() -> void:
 	rng.randomize()
@@ -87,6 +89,7 @@ func _ready() -> void:
 	_build_pace_bar()
 	_build_callout_banner()
 	%RunButton.pressed.connect(_on_run_night)
+	%OpenAnywayButton.pressed.connect(_on_open_anyway)
 	%ResetButton.pressed.connect(start_season)
 	%PlanButton.pressed.connect(_on_back_to_planning)
 	start_season()
@@ -137,6 +140,8 @@ func _build_pace_bar() -> void:
 
 
 func _build_callout_banner() -> void:
+	%BannerLabel.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	%BannerLabel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var response_group := ButtonGroup.new()
 	for b in [%DarkButton, %BenchButton, %PullButton]:
 		b.toggle_mode = true
@@ -195,6 +200,7 @@ func slot_style(c: Color) -> StyleBoxFlat:
 
 func start_season() -> void:
 	night = 1
+	force_open = false
 	weather = Calendar.roll_season(rng.randi())
 	roster_seed = rng.randi()
 	callout_rng.seed = rng.randi()
@@ -279,7 +285,7 @@ func refresh() -> void:
 
 	for i in layout.size():
 		var b: Button = %SlotRow.get_child(i)
-		b.text = TOOLS[layout[i]].to_upper()
+		b.text = slot_caption(i, assignment)
 		b.add_theme_stylebox_override("normal", slot_style(ROOM_COLORS[layout[i]]))
 		b.add_theme_stylebox_override("hover", slot_style(ROOM_COLORS[layout[i]].lightened(0.15)))
 		b.add_theme_stylebox_override("pressed", slot_style(ROOM_COLORS[layout[i]].darkened(0.15)))
@@ -308,7 +314,24 @@ func refresh() -> void:
 	)
 
 	if dark:
-		%CostPreview.text = "closed: $%.0f overhead" % Night.NIGHTLY_OVERHEAD
+		var gate := tonight_demand()
+		var door := gate * (Night.TICKET_PRICE - Night.MARKETING_PER_VISITOR)
+		var staffing := Allocation.roster_wages(
+			roster,
+			mini(Night.actors_for(layout), roster.size()),
+			[],
+			Casting.NEVER,
+		) + Night.upkeep_for(layout)
+		%CostPreview.text = (
+			"Quiet %s: maybe %d come through (~$%.0f at the door) against ~$%.0f to staff the rooms. Dark costs only the $%.0f overhead."
+			% [
+				Calendar.DAY_NAMES[Calendar.weekday(night)],
+				gate,
+				door,
+				staffing,
+				Night.NIGHTLY_OVERHEAD,
+			]
+		)
 	else:
 		%CostPreview.text = "staff %d, $%.0f wages + upkeep tonight, + $%.2f marketing per visitor" % [
 			Night.staff_for(layout),
@@ -321,6 +344,10 @@ func refresh() -> void:
 			+ Night.upkeep_for(layout) + Night.NIGHTLY_OVERHEAD,
 			Night.MARKETING_PER_VISITOR,
 		]
+
+	if not %RunButton.disabled and pending_absent.is_empty():
+		%RunButton.text = "Stay closed (−$%.0f)" % Night.NIGHTLY_OVERHEAD if dark else "Run night"
+	%OpenAnywayButton.visible = dark and not %RunButton.disabled and pending_absent.is_empty()
 
 	var strain := "actors fully reset"
 	if interval <= PACES["Packed"]:
@@ -340,10 +367,16 @@ func refresh() -> void:
 		_preview_board()
 
 
+func _on_open_anyway() -> void:
+	force_open = true
+	%OpenAnywayButton.visible = false
+	_on_run_night()
+
+
 func _on_run_night() -> void:
 	var demand := tonight_demand()
 
-	if Allocation.is_dark(layout, demand, night):
+	if not force_open and Allocation.is_dark(layout, demand, night):
 		cash -= Night.NIGHTLY_OVERHEAD
 		_night_finish(
 			"[b]%s, Oct %d[/b]  Closed tonight: too few would come out to cover the cast. −$%.0f keeps the lights on."
@@ -498,6 +531,7 @@ func _choose_policy(policy: int) -> void:
 
 func _preview_board() -> void:
 	var board: Dictionary = Casting.resolve(layout, roster, pending_absent, pending_policy)
+	var assignment: Dictionary = Casting.auto_assign(layout)
 	for i in layout.size():
 		var b: Button = %SlotRow.get_child(i)
 		var room: String = board.layout[i]
@@ -505,10 +539,12 @@ func _preview_board() -> void:
 		b.add_theme_stylebox_override("hover", slot_style(ROOM_COLORS[room].lightened(0.15)))
 		b.add_theme_stylebox_override("pressed", slot_style(ROOM_COLORS[room].darkened(0.15)))
 		if room != layout[i]:
-			if room == Rooms.CORRIDOR:
-				b.text = "%s\ndark" % TOOLS[room].to_upper()
-			else:
-				b.text = "%s\nshorthanded" % TOOLS[room].to_upper()
+			b.text = "%s\n%s" % [
+				TOOLS[room].to_upper(),
+				"dark" if room == Rooms.CORRIDOR else "shorthanded",
+			]
+		else:
+			b.text = slot_caption(i, assignment)
 
 
 func _show_banner() -> void:
@@ -518,14 +554,36 @@ func _show_banner() -> void:
 		for ai in assignment[room_i]:
 			room_of[ai] = room_i
 
-	var lines := []
+	var by_room := { }
+	var loose := []
 	for i in pending_absent:
-		var a: Dictionary = roster[i]
-		var nth: int = a.observed_callouts + 1
-		var called := "%s called out." % a.name
-		if nth > 1:
-			called = "%s called out again, %s time this month." % [a.name, ordinal(nth)]
-		lines.append(called + " " + consequence(i, room_of, assignment))
+		if room_of.has(i):
+			var r_i: int = room_of[i]
+			if not by_room.has(r_i):
+				by_room[r_i] = []
+			by_room[r_i].append(i)
+		else:
+			loose.append(i)
+	var lines := []
+	for r_i in by_room:
+		var names := []
+		for i in by_room[r_i]:
+			names.append(roster[i].name)
+		var who: String
+		if names.size() > 1:
+			who = " and ".join(names) + " both called out."
+		else:
+			var a: Dictionary = roster[by_room[r_i][0]]
+			var nth: int = a.observed_callouts + 1
+			who = (
+				"%s called out." % a.name
+				if nth == 1
+				else "%s called out again, %s time this month." % [a.name, ordinal(nth)]
+			)
+		lines.append(who + " " + consequence(by_room[r_i][0], room_of, assignment))
+	for i in loose:
+		lines.append("%s called out. They were on call; the board holds." % roster[i].name)
+
 	%BannerLabel.text = " ".join(lines)
 
 	var headcount := mini(Night.actors_for(layout), roster.size())
@@ -544,14 +602,7 @@ func _show_banner() -> void:
 			next_up = roster[i].name
 			break
 
-	%BenchButton.disabled = bench_free == 0
 	%BenchButton.text = "Send in %s" % next_up if next_up != "" else "Send the bench"
-	%BenchButton.tooltip_text = (
-		"No one on call — cast depth buys a bench in pre-season."
-		if bench_free == 0
-		else "%s steps into the empty spot at full wage." % next_up
-	)
-
 	var half_rooms := 0
 	var bench_left := bench_free
 	var rooms := assignment.keys()
@@ -578,6 +629,18 @@ func _show_banner() -> void:
 	pending_policy = Casting.NEVER
 
 	var never_board: Dictionary = Casting.resolve(layout, roster, pending_absent, Casting.NEVER)
+	var re_board: Dictionary = Casting.resolve(layout, roster, pending_absent, Casting.REASSIGN)
+	var responds: bool = re_board.layout != never_board.layout \
+			or re_board.ceilings != never_board.ceilings
+	%BenchButton.disabled = bench_free == 0 or not responds
+	%BenchButton.tooltip_text = (
+		"No one on call — cast depth buys a bench in pre-season."
+		if bench_free == 0
+		else "Sending %s in wouldn't reopen anything tonight." % next_up
+		if not responds
+		else "%s steps into the empty spot at full wage." % next_up
+	)
+
 	var goes_dark := false
 	for i in layout.size():
 		if Casting.needs_for(layout[i]) > 0 and never_board.layout[i] == Rooms.CORRIDOR:
@@ -610,6 +673,7 @@ func ordinal(n: int) -> String:
 
 
 func _resolve_and_run(demand: int) -> void:
+	force_open = false
 	var absent := pending_absent
 	var policy := pending_policy
 	pending_absent = []
@@ -655,6 +719,30 @@ func _resolve_and_run(demand: int) -> void:
 	for i in absent:
 		line += " [color=#8d99ae]%s called out (%s).[/color]" \
 				% [roster[i].name, ordinal(roster[i].observed_callouts)]
+	if WEATHER_NOTES.has(weather[night - 1]):
+		line += " [color=#8d99ae]%s[/color]" % WEATHER_NOTES[weather[night - 1]]
+	if sold_out:
+		var turned_away: int = demand - r.groups * Night.GROUP_SIZE
+		line += " [color=#e0a458]Sold out! Turned away ~%d (about %s in tickets).[/color]" % [
+			turned_away,
+			money(turned_away * Night.TICKET_PRICE),
+		]
+		if interval > PACES["Packed"] and capacity_hints < 2:
+			capacity_hints += 1
+			line += " [color=#8d99ae]A faster line pace would admit more.[/color]"
+	var m: float = town.momentum()
+	var dir := 1 if m >= 4.0 else (-1 if m <= -4.0 else 0)
+	if dir != 0:
+		if dir != wom_direction:
+			wom_direction = dir
+			wom_hints = 0
+		if wom_hints < 2 and not (dir < 0 and night >= FINAL_WEEK_NIGHT):
+			wom_hints += 1
+			line += " [color=#8d99ae]%s[/color]" % (
+				"Good word is getting around; expect bigger crowds in a few nights."
+				if dir > 0
+				else "Bad word is spreading; crowds will thin soon."
+			)
 	%RunButton.disabled = true
 	%ResetButton.disabled = true
 	var cash_before := cash
@@ -694,3 +782,21 @@ func consequence(actor_i: int, room_of: Dictionary, assignment: Dictionary) -> S
 	if present == 0:
 		return "Both actors out; the room stands empty."
 	return "No partner to run the rotation, so the room can't open."
+
+
+func slot_caption(i: int, assignment: Dictionary) -> String:
+	var label: String = TOOLS[layout[i]].to_upper()
+	if not assignment.has(i):
+		return label
+	var inits := []
+	var short := false
+	for ai in assignment[i]:
+		if ai < roster.size():
+			inits.append(initials(roster[ai].name))
+		else:
+			short = true
+	if short:
+		return "%s\nshort-staffed" % label
+	if inits.size() == 4:
+		return "%s\n%s %s\n%s %s" % [label, inits[0], inits[1], inits[2], inits[3]]
+	return "%s\n%s" % [label, " ".join(inits)]
