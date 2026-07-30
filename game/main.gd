@@ -4,6 +4,7 @@ const Night = preload("res://sim/night.gd")
 const Town = preload("res://sim/town.gd")
 const Rooms = preload("res://sim/rooms.gd")
 const Allocation = preload("res://sim/allocation.gd")
+const Calendar = preload("res://sim/calendar.gd")
 
 const ROOM_SLOTS := 10
 
@@ -54,6 +55,19 @@ var wom_direction := 0
 
 const FINAL_WEEK_NIGHT := 25 # WOM_DELAY + rep drift ≈ a week
 
+var weather: Array[String]
+
+const WEATHER_WORDS := {
+	"clear": "clear skies",
+	"drizzle": "drizzle likely",
+	"rain": "rain on the way",
+}
+
+const WEATHER_NOTES := {
+	"drizzle": "The drizzle thinned the line a little.",
+	"rain": "Rain kept the crowds home.",
+}
+
 
 func _ready() -> void:
 	rng.randomize()
@@ -62,6 +76,7 @@ func _ready() -> void:
 	_build_pace_bar()
 	%RunButton.pressed.connect(_on_run_night)
 	%ResetButton.pressed.connect(start_season)
+	%PlanButton.pressed.connect(_on_back_to_planning)
 	start_season()
 
 
@@ -117,6 +132,7 @@ func slot_style(c: Color) -> StyleBoxFlat:
 
 func start_season() -> void:
 	night = 1
+	weather = Calendar.roll_season(rng.randi())
 	if not GameState.alloc.is_empty():
 		var a: Dictionary = GameState.alloc
 		layout = Allocation.layout_for(a.build)
@@ -181,9 +197,10 @@ func refresh() -> void:
 		"font_color",
 		Color.INDIAN_RED if cash < 0.0 else Color.WHITE,
 	)
-	%NightLabel.text = "Oct %d" % night if night <= Night.SEASON_NIGHTS else "Season over"
+	var day: String = Calendar.DAY_NAMES[Calendar.weekday(night)]
+	%NightLabel.text = "%s, Oct %d · %s" % [day, night, WEATHER_WORDS[weather[night - 1]]] if night <= Night.SEASON_NIGHTS else "Season over"
 	if night == Night.SEASON_NIGHTS:
-		%NightLabel.text = "Halloween"
+		%NightLabel.text = "Halloween · %s · %s" % [day, WEATHER_WORDS[weather[night - 1]]]
 
 	for i in layout.size():
 		var b: Button = %SlotRow.get_child(i)
@@ -195,11 +212,18 @@ func refresh() -> void:
 	for b in %ToolBar.get_children():
 		b.disabled = cheapest_place_cost(b.get_meta("type")) > cash
 
-	%CostPreview.text = "staff %d, $%.0f wages + upkeep tonight, + $%.2f marketing per visitor" % [
-		Night.staff_for(layout),
-		Night.wages_for(layout) + Night.upkeep_for(layout) + Night.NIGHTLY_OVERHEAD,
-		Night.MARKETING_PER_VISITOR,
-	]
+	var dark := (
+		night <= Night.SEASON_NIGHTS and Allocation.is_dark(layout, tonight_demand(), night)
+	)
+
+	if dark:
+		%CostPreview.text = "closed: $%.0f overhead" % Night.NIGHTLY_OVERHEAD
+	else:
+		%CostPreview.text = "staff %d, $%.0f wages + upkeep tonight, + $%.2f marketing per visitor" % [
+			Night.staff_for(layout),
+			Night.wages_for(layout) + Night.upkeep_for(layout) + Night.NIGHTLY_OVERHEAD,
+			Night.MARKETING_PER_VISITOR,
+		]
 
 	var strain := "actors fully reset"
 	if interval <= PACES["Packed"]:
@@ -212,15 +236,30 @@ func refresh() -> void:
 	]
 	%BlueprintNote.visible = night == 1
 
+	if not %RunButton.disabled:
+		%RunButton.text = "Closed tonight (−$%.0f)" % Night.NIGHTLY_OVERHEAD if dark else "Run night"
+
 
 func _on_run_night() -> void:
-	var demand: int = town.demand()
+	var demand := tonight_demand()
+
+	# should player be allowed to run attraction anyways to build reputation?
+	# auto-close matches the tested reference policy; player-scheduled nights are an future roadmap question
+	if Allocation.is_dark(layout, demand, night):
+		cash -= Night.NIGHTLY_OVERHEAD
+		_night_finish(
+			"[b]%s, Oct %d[/b]  Closed tonight: too few would come out to cover the cast. −$%.0f keeps the lights on."
+			% [Calendar.DAY_NAMES[Calendar.weekday(night)], night, Night.NIGHTLY_OVERHEAD]
+		)
+		return
+
 	var capacity := int(Night.NIGHT_SECONDS / interval)
 	var r: Dictionary = Night.run(layout, interval, rng, demand)
 	var sold_out: bool = demand / Night.GROUP_SIZE > capacity
 	town.record_night(r.satisfaction)
 	var color := "66bb6a" if r.profit >= 0.0 else "ef5350"
-	var line := "[b]Oct %d[/b]  %d visitors × $%.0f tickets + $%.0f souvenirs, photos & merch − $%.0f costs = [color=#%s]%s[/color]. %s" % [
+	var line := "[b]%s, Oct %d[/b]  %d visitors × $%.0f tickets + $%.0f souvenirs, photos & merch − $%.0f costs = [color=#%s]%s[/color]. %s" % [
+		Calendar.DAY_NAMES[Calendar.weekday(night)],
 		night,
 		r.groups * Night.GROUP_SIZE,
 		Night.TICKET_PRICE,
@@ -233,6 +272,8 @@ func _on_run_night() -> void:
 	var note := night_note(r)
 	if note != "":
 		line += " [color=#8d99ae]%s[/color]" % note
+	if WEATHER_NOTES.has(weather[night - 1]):
+		line += " [color=#8d99ae]%s[/color]" % WEATHER_NOTES[weather[night - 1]]
 	if sold_out:
 		var turned_away: int = demand - r.groups * Night.GROUP_SIZE
 		line += " [color=#e0a458]Sold out! Turned away ~%d (about %s in tickets).[/color]" % [
@@ -268,7 +309,11 @@ func _on_run_night() -> void:
 
 func _night_tick(t: float, cash_before: float, visitors: int) -> void:
 	%CashLabel.text = money(lerpf(cash_before, cash, t))
-	%NightLabel.text = "Oct %d | %d visitors so far" % [night, int(visitors * t)]
+	%NightLabel.text = "%s, Oct %d | %d visitors so far" % [
+		Calendar.DAY_NAMES[Calendar.weekday(night)],
+		night,
+		int(visitors * t),
+	]
 	for i in %SlotRow.get_child_count():
 		var b: Button = %SlotRow.get_child(i)
 		b.modulate = Color(1.4, 1.4, 1.4) if i == int(t * 40.0) % 10 else Color.WHITE
@@ -282,6 +327,11 @@ func _night_finish(line: String) -> void:
 		b.modulate = Color.WHITE
 	%NightLog.append_text(line + "\n")
 	night += 1
+	if not %RunButton.disabled:
+		var dark := (
+			night <= Night.SEASON_NIGHTS and Allocation.is_dark(layout, tonight_demand(), night)
+		)
+		%RunButton.text = "Closed tonight (−$%.0f)" % Night.NIGHTLY_OVERHEAD if dark else "Run night"
 	if cash < Night.LOAN_LIMIT:
 		%NightLog.append_text("[color=#ef5350]The bank calls your loan. Season over.[/color]\n")
 		%RunButton.text = "Bankrupt: %s" % money(cash)
@@ -299,6 +349,11 @@ func _night_finish(line: String) -> void:
 	if night > Night.SEASON_NIGHTS:
 		%RunButton.text = "Season over: %s" % money(cash)
 		%RunButton.disabled = true
+	else:
+		%NightLog.append_text(
+			"[color=#8d99ae]Forecast for %s: %s.[/color]\n"
+			% [Calendar.DAY_NAMES[Calendar.weekday(night)], WEATHER_WORDS[weather[night - 1]]]
+		)
 	refresh()
 
 
@@ -349,3 +404,13 @@ func trailing_corridors() -> int:
 
 func money(x: float) -> String:
 	return "-$%.0f" % absf(x) if x < 0.0 else "$%.0f" % x
+
+
+func tonight_demand() -> int:
+	return int(
+		town.demand() * Calendar.weight_for(night) * Calendar.WEATHER[weather[night - 1]].mult
+	)
+
+
+func _on_back_to_planning() -> void:
+	get_tree().change_scene_to_file("res://game/pivot.tscn")

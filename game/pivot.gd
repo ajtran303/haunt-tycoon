@@ -20,6 +20,9 @@ func _ready() -> void:
 	_build_rows()
 	%RunButton.pressed.connect(_on_run)
 	%StartButton.pressed.connect(_on_start_october)
+	if not GameState.alloc.is_empty():
+		for key in sliders:
+			sliders[key].value = GameState.alloc[key]
 	_refresh()
 
 
@@ -98,7 +101,7 @@ func rung_text(budget: float) -> String:
 	text += " ($%d)" % int(Night.build_cost_for(layout))
 	for rung in Allocation.BUILD_LADDER:
 		if rung[0] > budget:
-			return text + " — next tier at $%d" % int(rung[0])
+			return text + " (next tier at $%d)" % int(rung[0])
 	return text
 
 
