@@ -3,6 +3,7 @@ const Layouts = preload("res://sim/layouts.gd")
 const Town = preload("res://sim/town.gd")
 const Rooms = preload("res://sim/rooms.gd")
 const Walkthrough = preload("res://sim/walkthrough.gd")
+const Calendar = preload("res://sim/calendar.gd")
 
 const ROOMS := 10
 const SCARE_MARGINAL := 1_500.0 # BUILD_COST.a - BUILD_COST.g
@@ -31,13 +32,13 @@ const BUILD_LADDER := [
 
 static func opening_cash(alloc: Dictionary) -> float:
 	return Night.STARTING_CASH \
-		- Night.build_cost_for(layout_for(alloc.build)) \
-		- alloc.quality \
-		- spares_for(alloc.depth) * SPARE_COST \
-		- alloc.marketing
+			- Night.build_cost_for(layout_for(alloc.build)) \
+			- alloc.quality \
+			- spares_for(alloc.depth) * SPARE_COST \
+			- alloc.marketing
 
 
-static func run_season(alloc: Dictionary, seed_val: int) -> Array[float]:
+static func run_season(alloc: Dictionary, seed_val: int) -> Array[Dictionary]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_val
 	var callout_rng := RandomNumberGenerator.new()
@@ -54,28 +55,42 @@ static func run_season(alloc: Dictionary, seed_val: int) -> Array[float]:
 			- spares * SPARE_COST \
 			- alloc.marketing
 
-	var trajectory: Array[float] = []
+	var trajectory: Array[Dictionary] = []
+
+	var weather := Calendar.roll_season(seed_val)
+
 	for night in Night.SEASON_NIGHTS:
 		var tonight := with_callouts(layout, spares, callout_rng)
-		var interval := (
-			Night.PACKED_INTERVAL if night + 1 >= CASH_OUT_DAY else Night.LOOSE_INTERVAL
+
+		var demand := int(
+			town.demand() * Calendar.weight_for(night + 1) * Calendar.WEATHER[weather[night]].mult
 		)
 
-		var r: Dictionary = Night.run(
-			tonight,
-			interval,
-			rng,
-			town.demand(),
-			Walkthrough.PRIME_SCALE,
-			"",
-			effective_bonus(bonus, interval),
-		)
-		cash += r.profit
-		town.record_night(r.satisfaction)
-		trajectory.append(cash)
+		var is_dark_night := is_dark(tonight, demand, night + 1)
+		
+		var revenue := 0.0
+		if is_dark_night:
+			cash -= Night.NIGHTLY_OVERHEAD
+		else:
+			var loose_cap := int(Night.NIGHT_SECONDS / Night.LOOSE_INTERVAL) * Night.GROUP_SIZE # 540
+			var interval := Night.PACKED_INTERVAL if demand > loose_cap else Night.LOOSE_INTERVAL
+			var r: Dictionary = Night.run(
+				tonight,
+				interval,
+				rng,
+				demand,
+				Walkthrough.PRIME_SCALE,
+				"",
+				effective_bonus(bonus, interval),
+			)
+			cash += r.profit
+			town.record_night(r.satisfaction)
+			revenue = r.tickets + r.gift
+
+		trajectory.append({ cash = cash, revenue = revenue })
 		if cash < Night.LOAN_LIMIT:
 			while trajectory.size() < Night.SEASON_NIGHTS:
-				trajectory.append(cash)
+				trajectory.append({ cash = cash, revenue = 0.0 })
 			break
 	return trajectory
 
@@ -113,8 +128,17 @@ static func with_callouts(layout: Array, spares: int, rng: RandomNumberGenerator
 
 
 static func effective_bonus(bonus: float, interval: float) -> float:
-	return bonus * clampf(
+	var t := clampf(
 		(interval - Night.PACKED_INTERVAL) / (Night.LOOSE_INTERVAL - Night.PACKED_INTERVAL),
 		0.0,
 		1.0,
 	)
+	return bonus * lerpf(0.7, 1.0, t)
+
+
+static func is_dark(tonight: Array, demand: int, night: int) -> bool: # night is 1-based
+	var must_open := Calendar.weekday(night) in [0, 5, 6] \
+			or night >= Calendar.HALLOWEEN_WEEK_START
+	var marginal := Night.wages_for(tonight) + Night.upkeep_for(tonight)
+	return not must_open \
+			and demand * (Night.TICKET_PRICE - Night.MARKETING_PER_VISITOR) < marginal

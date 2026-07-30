@@ -113,18 +113,18 @@ func _on_run() -> void:
 			%SeasonLog.append_text(
 				"[color=#8d99ae]The line packs from here to Halloween.[/color]\n"
 			)
-		var delta: float = t[i] - prev
+		var delta: float = t[i].cash - prev
 		var color := "66bb6a" if delta >= 0.0 else "ef5350"
 		%SeasonLog.append_text(
-			"Oct %d: %s ([color=#%s]%s[/color])\n" % [i + 1, money(t[i]), color, money(delta)],
+			"Oct %d: %s ([color=#%s]%s[/color])\n" % [i + 1, money(t[i].cash), color, money(delta)],
 		)
-		if t[i] < Night.LOAN_LIMIT:
+		if t[i].cash < Night.LOAN_LIMIT:
 			%SeasonLog.append_text(
 				"[color=#ef5350]The bank calls your loan. Season over.[/color]\n"
 			)
 			return
-		prev = t[i]
-	%SeasonLog.append_text("[b]Halloween close: %s[/b]\n" % money(t[-1]))
+		prev = t[i].cash
+	%SeasonLog.append_text("[b]Halloween close: %s[/b]\n" % money(t[-1].cash))
 
 
 func _on_start_october() -> void:
