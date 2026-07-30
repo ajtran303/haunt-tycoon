@@ -27,6 +27,7 @@ static func run(
 	prime_scale: float = PRIME_SCALE,
 	tank: float = DEFAULT_TANK,
 	depletion: float = 1.0,
+	ceilings: Array = [],
 ) -> Dictionary:
 	var r := tank
 	var hits := 0
@@ -38,7 +39,8 @@ static func run(
 	var prime := 0.0
 	var boredom := 0.0
 
-	for room in layout:
+	for i in layout.size():
+		var room: String = layout[i]
 		match room:
 			Rooms.CORRIDOR:
 				rooms_since_scare += 1
@@ -55,7 +57,8 @@ static func run(
 				r -= HIT_DRAIN * EFFECT_DRAIN * depletion
 			_:
 				rooms_since_scare = 0
-				var room_ceiling := ANIM_CEILING if room == Rooms.ANIMATRONIC else ceiling
+				var base: float = ceilings[i] if not ceilings.is_empty() else ceiling
+				var room_ceiling: float = ANIM_CEILING if room == Rooms.ANIMATRONIC else base
 				var chance := minf(r, room_ceiling)
 				if room == Rooms.PAIR_SCARE:
 					chance = minf(chance + DISTRACT_BONUS, CHANCE_CAP)
@@ -75,4 +78,11 @@ static func run(
 
 	final_reaction = maxf(0.0, final_reaction - END_FADE_PER_ROOM * rooms_since_scare)
 
-	return { "hits": hits, "actor_hits": actor_hits, "misses": misses, "peak": peak, "boredom": boredom, "final_reaction": final_reaction }
+	return {
+		"hits": hits,
+		"actor_hits": actor_hits,
+		"misses": misses,
+		"peak": peak,
+		"boredom": boredom,
+		"final_reaction": final_reaction,
+	}

@@ -70,11 +70,16 @@ static func run(
 	demand: int = DEMAND,
 	prime_scale: float = Walkthrough.PRIME_SCALE,
 	forced_type: String = "",
-	ceiling_bonus: float = 0.0
+	ceiling_bonus: float = 0.0,
+	room_bonus: Array = []
 ) -> Dictionary:
 	var capacity := int(NIGHT_SECONDS / dispatch_interval)
+	@warning_ignore("integer_division")
 	var groups := mini(capacity, (demand / GROUP_SIZE))
 	var ceiling := minf(actor_ceiling_for(dispatch_interval) + ceiling_bonus, 95.0)
+	var ceilings: Array = []
+	for b in room_bonus:
+		ceilings.append(minf(actor_ceiling_for(dispatch_interval) + b, 95.0))
 	var total_hits := 0
 	var total_actor_hits := 0
 	var total_sat := 0.0
@@ -94,6 +99,7 @@ static func run(
 			prime_scale,
 			v.tank,
 			v.depletion,
+			ceilings
 		)
 		total_hits += w.hits
 		total_actor_hits += w.actor_hits
