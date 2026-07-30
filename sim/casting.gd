@@ -56,7 +56,7 @@ static func resolve(
 	for room_i in assignment:
 		var here: Array = []
 		for actor_i in assignment[room_i]:
-			if not absent.has(actor_i):
+			if actor_i < roster.size() and not absent.has(actor_i):
 				here.append(actor_i)
 		present[room_i] = here
 

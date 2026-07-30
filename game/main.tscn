@@ -27,7 +27,7 @@ theme_override_constants/margin_bottom = 24
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="TitleBar" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=553933425]
+[node name="TitleBar" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=732184545]
 layout_mode = 2
 
 [node name="GameTitle" type="Label" parent="MarginContainer/VBoxContainer/TitleBar" unique_id=271677748]
@@ -72,6 +72,10 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 
+[node name="RosterStrip" type="HFlowContainer" parent="MarginContainer/VBoxContainer" unique_id=1070460637]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="PaceRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=325635195]
 layout_mode = 2
 
@@ -86,6 +90,33 @@ layout_mode = 2
 [node name="CostPreview" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1937493464]
 unique_name_in_owner = true
 layout_mode = 2
+
+[node name="CalloutBanner" type="PanelContainer" parent="MarginContainer/VBoxContainer" unique_id=999464148]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/CalloutBanner" unique_id=606846032]
+layout_mode = 2
+
+[node name="BannerLabel" type="Label" parent="MarginContainer/VBoxContainer/CalloutBanner/HBoxContainer" unique_id=820326820]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BenchButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HBoxContainer" unique_id=592902413]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+
+[node name="PullButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HBoxContainer" unique_id=1124511871]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+
+[node name="DarkButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HBoxContainer" unique_id=2031336073]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
 
 [node name="RunButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=1551256321]
 unique_name_in_owner = true

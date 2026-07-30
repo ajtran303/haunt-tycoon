@@ -7,10 +7,12 @@ const STEP := 500.0
 
 const KNOBS := [
 	{ key = "build", label = "Build" },
-	{ key = "quality", label = "Cast quality" },
+	{ key = "quality", label = "Casting budget" },
 	{ key = "depth", label = "Cast depth" },
 	{ key = "marketing", label = "Marketing" },
 ]
+
+const SKILL_WORDS := [[4.0, "green"], [7.0, "solid"], [9.0, "strong"], [999.0, "headliner"]]
 
 var sliders := { }
 var effects := { }
@@ -72,7 +74,8 @@ func _refresh() -> void:
 
 	effects["build"].text = rung_text(a.build)
 	effects["quality"].text = (
-		"+%.1f actor ceiling at a loose pace" % Allocation.ceiling_bonus_for(a.quality)
+		"signs mostly %s talent"
+		% skill_word(minf(a.quality / Allocation.HIRE_TIER_DOLLARS, 1.0) * 10.0)
 	)
 	effects["depth"].text = spares_text(a.depth)
 	effects["marketing"].text = (
@@ -85,7 +88,8 @@ func spares_text(budget: float) -> String:
 	var text := (
 		"no spare actors"
 		if spares == 0
-		else "%d spare actor%s" % [spares, "s" if spares > 1 else ""]
+		else "bench: %d on-call actor%s ($%.0f/night when idle)"
+		% [spares, "s" if spares > 1 else "", Allocation.ON_CALL_WAGE]
 	)
 	if budget < Night.STARTING_CASH:
 		text += " — next spare at $%d" % int((spares + 1) * Allocation.SPARE_COST)
@@ -137,3 +141,10 @@ func _on_start_october() -> void:
 
 func money(x: float) -> String:
 	return "-$%.0f" % absf(x) if x < 0.0 else "$%.0f" % x
+
+
+func skill_word(skill: float) -> String:
+	for band in SKILL_WORDS:
+		if skill < band[0]:
+			return band[1]
+	return SKILL_WORDS[-1][1]
