@@ -70,10 +70,11 @@ static func run(
 	demand: int = DEMAND,
 	prime_scale: float = Walkthrough.PRIME_SCALE,
 	forced_type: String = "",
+	ceiling_bonus: float = 0.0
 ) -> Dictionary:
 	var capacity := int(NIGHT_SECONDS / dispatch_interval)
 	var groups := mini(capacity, (demand / GROUP_SIZE))
-	var ceiling := actor_ceiling_for(dispatch_interval)
+	var ceiling := minf(actor_ceiling_for(dispatch_interval) + ceiling_bonus, 95.0)
 	var total_hits := 0
 	var total_actor_hits := 0
 	var total_sat := 0.0
