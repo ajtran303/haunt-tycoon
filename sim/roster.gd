@@ -50,7 +50,7 @@ static func reliability_quota(size: int, rng: RandomNumberGenerator) -> Array:
 	while used < size:
 		var best := 0
 		for i in remainders.size():
-			if remainders[i] > remainders[best]:
+			if remainders[i] >= remainders[best]: # ties break flaky-ward
 				best = i
 		counts[best] += 1
 		remainders[best] = -1.0
