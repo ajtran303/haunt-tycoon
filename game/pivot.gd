@@ -97,14 +97,14 @@ func _refresh() -> void:
 
 	effects["build"].text = rung_text(a.build)
 	effects["quality"].text = (
-		"$0 — takes whoever answers the flyer"
+		"$0 (takes whoever answers the flyer)"
 		if a.quality == 0.0
-		else "%s — signs mostly %s talent"
+		else "%s (signs mostly %s talent)"
 		% [money(a.quality), skill_word(minf(a.quality / Allocation.HIRE_TIER_DOLLARS, 1.0) * 10.0)]
 	)
 	effects["depth"].text = spares_text(a.depth)
 	effects["marketing"].text = (
-		"%s — opening reputation %.0f"
+		"%s (opening reputation %.0f)"
 		% [money(a.marketing), Allocation.starting_rep_for(a.marketing)]
 	)
 
@@ -129,7 +129,7 @@ func rung_text(budget: float) -> String:
 		text += " ($%d)" % int(Night.build_cost_for(layout))
 	for rung in Allocation.BUILD_LADDER:
 		if rung[0] > budget:
-			return text + " — next: %d scares ($%d)" % [rung[1].count("a"), int(rung[0])]
+			return text + " (next: %d scares ($%d))" % [rung[1].count("a"), int(rung[0])]
 	return text
 
 
