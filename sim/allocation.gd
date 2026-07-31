@@ -6,6 +6,7 @@ const Walkthrough = preload("res://sim/walkthrough.gd")
 const Calendar = preload("res://sim/calendar.gd")
 const Roster = preload("res://sim/roster.gd")
 const Casting = preload("res://sim/casting.gd")
+const Records = preload("res://sim/records.gd")
 
 const ROOMS := 10
 const SCARE_MARGINAL := 1_500.0 # BUILD_COST.a - BUILD_COST.g
@@ -44,6 +45,7 @@ static func run_season(
 	seed_val: int,
 	policy: int = Casting.REASSIGN,
 	callouts: bool = true,
+	records: Variant = null,
 ) -> Array[Dictionary]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_val
@@ -54,6 +56,15 @@ static func run_season(
 
 	var layout := layout_for(alloc.build)
 	var roster := roster_for(alloc, roster_rng)
+
+	var sample_rng := RandomNumberGenerator.new()
+	sample_rng.seed = seed_val + 400_000
+	if records != null:
+		records.built = layout
+		records.roster = roster
+		records.careers = { }
+		records.nights = []
+
 	var headcount := Night.actors_for(layout)
 	var town := Town.new(starting_rep_for(alloc.marketing))
 
@@ -87,6 +98,7 @@ static func run_season(
 			var bonus_row: Array = []
 			for c in board.ceilings:
 				bonus_row.append(effective_bonus(c, interval))
+			var group_records: Variant = [] if records != null else null
 			var r: Dictionary = Night.run(
 				tonight,
 				interval,
@@ -96,11 +108,15 @@ static func run_season(
 				"",
 				0.0,
 				bonus_row,
+				group_records,
 			)
-			cash += r.profit - (roster_wages(roster, headcount, absent, policy)
-			- Night.wages_for(tonight))
+			cash += r.profit - (
+				roster_wages(roster, headcount, absent, policy) - Night.wages_for(tonight)
+			)
 			town.record_night(r.satisfaction)
 			revenue = r.tickets + r.gift
+			if records != null:
+				Records.digest(records, group_records, board, roster, night + 1, sample_rng)
 
 		trajectory.append({ cash = cash, revenue = revenue })
 		if cash < Night.LOAN_LIMIT:

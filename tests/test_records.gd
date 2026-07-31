@@ -5,6 +5,7 @@ const Rooms = preload("res://sim/rooms.gd")
 const Casting = preload("res://sim/casting.gd")
 const Night = preload("res://sim/night.gd")
 const Records = preload("res://sim/records.gd")
+const Allocation = preload("res://sim/allocation.gd")
 
 const LAYOUT := ["a", "g", "e", "g", "g", "p", "n", "g", "g", "a"]
 const SEED := 12345
@@ -17,6 +18,7 @@ func _initialize() -> void:
 	events_resum()
 	collector_changes_nothing()
 	night_conservation()
+	season_collector_changes_nothing()
 	print("PASS: records invariants hold" if failed == 0 else "FAIL: %d broken" % failed)
 	quit(1 if failed > 0 else 0)
 
@@ -144,3 +146,20 @@ func night_conservation() -> void:
 			screams + t.machine.hits + t.effects.hits == roundi(r.hit_average * r.groups),
 			"seed %d: total hits leak" % [SEED + s],
 		)
+
+
+func season_collector_changes_nothing() -> void:
+	var alloc := { build = 11_000.0, quality = 6_000.0, depth = 5_000.0, marketing = 4_000.0 }
+	for s in 5:
+		var off: Array[Dictionary] = Allocation.run_season(alloc, SEED + s)
+		var records := { }
+		var on: Array[Dictionary] = Allocation.run_season(
+			alloc,
+			SEED + s,
+			Casting.REASSIGN,
+			true,
+			records,
+		)
+		check(off == on, "seed %d: records collector changed the season" % [SEED + s])
+		check(not records.nights.is_empty(), "seed %d: no nights sampled" % [SEED + s])
+		check(not records.careers.is_empty(), "seed %d: no careers accumulated" % [SEED + s])
