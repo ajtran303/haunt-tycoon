@@ -28,8 +28,9 @@ static func run(
 	tank: float = DEFAULT_TANK,
 	depletion: float = 1.0,
 	ceilings: Array = [],
+	events: Variant = null,
 ) -> Dictionary:
-	var r := tank
+	var current_tank := tank
 	var hits := 0
 	var actor_hits := 0
 	var misses := 0
@@ -44,37 +45,50 @@ static func run(
 		match room:
 			Rooms.CORRIDOR:
 				rooms_since_scare += 1
+				var bore_delta := BORE_PER_ROOM if rooms_since_scare > BORE_FREE_ROOMS else 0.0
 				if rooms_since_scare > BORE_FREE_ROOMS:
-					boredom += BORE_PER_ROOM
+					boredom += bore_delta
+				if events != null:
+					events.append({ room = i, kind = "corridor", reaction = 0.0, bore = bore_delta })
 				prime = maxf(0.0, prime - PRIME_DECAY_PER_ROOM)
-				r = minf(tank, r + recovery)
+				current_tank = minf(tank, current_tank + recovery)
 			Rooms.EFFECT:
 				rooms_since_scare = 0
 				hits += 1
-				var reaction := minf(minf(r, EFFECT_CEILING) + prime * prime_scale, 100.0)
+				var reaction := minf(minf(current_tank, EFFECT_CEILING) + prime * prime_scale, 100.0)
 				peak = maxf(peak, reaction)
 				final_reaction = reaction
-				r -= HIT_DRAIN * EFFECT_DRAIN * depletion
+				current_tank -= HIT_DRAIN * EFFECT_DRAIN * depletion
+				if events != null:
+					events.append({ room = i, kind = "effect_hit", reaction = reaction, bore = 0.0 })
 			_:
 				rooms_since_scare = 0
 				var base: float = ceilings[i] if not ceilings.is_empty() else ceiling
 				var room_ceiling: float = ANIM_CEILING if room == Rooms.ANIMATRONIC else base
-				var chance := minf(r, room_ceiling)
+				var chance := minf(current_tank, room_ceiling)
 				if room == Rooms.PAIR_SCARE:
 					chance = minf(chance + DISTRACT_BONUS, CHANCE_CAP)
+				var is_anim := room == Rooms.ANIMATRONIC
+				var kind: String
+				var hit_reaction := 0.0
 				if rng.randf() * 100.0 < chance:
 					hits += 1
 					actor_hits += 1
-					var reaction := minf(minf(r, room_ceiling) + prime * prime_scale, 100.0)
+					var reaction := minf(minf(current_tank, room_ceiling) + prime * prime_scale, 100.0)
 					peak = maxf(peak, reaction)
 					final_reaction = reaction
-					r -= HIT_DRAIN * depletion
+					current_tank -= HIT_DRAIN * depletion
 					prime = PRIME_ON_HIT
+					kind = "anim_hit" if is_anim else "hit"
+					hit_reaction = reaction
 				else:
 					misses += 1
 					final_reaction *= 0.4
-					r -= MISS_DRAIN
-		r = maxf(0.0, r)
+					current_tank -= MISS_DRAIN
+					kind = "anim_whiff" if is_anim else "whiff"
+				if events != null:
+					events.append({ room = i, kind = kind, reaction = hit_reaction, bore = 0.0 })
+		current_tank = maxf(0.0, current_tank)
 
 	final_reaction = maxf(0.0, final_reaction - END_FADE_PER_ROOM * rooms_since_scare)
 
