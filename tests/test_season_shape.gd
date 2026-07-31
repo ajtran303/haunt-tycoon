@@ -21,7 +21,7 @@ func _initialize() -> void:
 	check_share("balanced", BALANCED, BAND_LO, BAND_HI)
 	check_share("build heavy", Gate.BUILD_HEAVY, RAIL_LO, RAIL_HI)
 	check_share("cast heavy", Gate.CAST_HEAVY, RAIL_LO, RAIL_HI)
-	print("Pass: season shape holds" if failed == 0 else "FAIL: %d broken" % failed)		
+	print("PASS: season shape holds" if failed == 0 else "FAIL: %d broken" % failed)		
 	quit(1 if failed > 0 else 0)
 
 func check(ok: bool, msg: String) -> void:
