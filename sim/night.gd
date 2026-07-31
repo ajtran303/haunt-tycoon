@@ -71,7 +71,8 @@ static func run(
 	prime_scale: float = Walkthrough.PRIME_SCALE,
 	forced_type: String = "",
 	ceiling_bonus: float = 0.0,
-	room_bonus: Array = []
+	room_bonus: Array = [],
+	group_records: Variant = null,
 ) -> Dictionary:
 	var capacity := int(NIGHT_SECONDS / dispatch_interval)
 	@warning_ignore("integer_division")
@@ -91,6 +92,7 @@ static func run(
 	for i in groups:
 		var type := forced_type if forced_type != "" else draw_type(rng)
 		var v: Dictionary = Visitors.TYPES[type]
+		var events: Variant = [] if group_records != null else null
 		var w: Dictionary = Walkthrough.run(
 			layout,
 			rng,
@@ -99,15 +101,19 @@ static func run(
 			prime_scale,
 			v.tank,
 			v.depletion,
-			ceilings
+			ceilings,
+			events,
 		)
+		var sat := satisfaction(w, v.tank)
 		total_hits += w.hits
 		total_actor_hits += w.actor_hits
-		total_sat += satisfaction(w, v.tank)
+		total_sat += sat
 		total_misses += w.misses
 		total_boredom += w.boredom
 		total_peak += w.peak
 		total_final += w.final_reaction
+		if group_records != null:
+			group_records.append({ type = type, satisfaction = sat, events = events })
 
 	var tickets := groups * GROUP_SIZE * TICKET_PRICE
 	var gift := total_actor_hits * GROUP_SIZE * GIFT_PER_ACTOR_HIT

@@ -2,6 +2,9 @@ extends SceneTree
 
 const Walkthrough = preload("res://sim/walkthrough.gd")
 const Rooms = preload("res://sim/rooms.gd")
+const Casting = preload("res://sim/casting.gd")
+const Night = preload("res://sim/night.gd")
+const Records = preload("res://sim/records.gd")
 
 const LAYOUT := ["a", "g", "e", "g", "g", "p", "n", "g", "g", "a"]
 const SEED := 12345
@@ -13,6 +16,7 @@ var failed := 0
 func _initialize() -> void:
 	events_resum()
 	collector_changes_nothing()
+	night_conservation()
 	print("PASS: records invariants hold" if failed == 0 else "FAIL: %d broken" % failed)
 	quit(1 if failed > 0 else 0)
 
@@ -95,3 +99,48 @@ func check(ok: bool, msg: String) -> void:
 	if not ok:
 		failed += 1
 		print("FAIL: " + msg)
+
+
+func night_conservation() -> void:
+	var layout := ["p", "g", "a", "g", "e", "a", "n", "g", "a"] # headcount 10
+	var roster: Array[Dictionary] = []
+	for s in [9.0, 8.0, 7.0, 6.5, 6.0, 5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.0]:
+		roster.append({ skill = s })
+	for s in SEEDS:
+		var board: Dictionary = Casting.resolve(layout, roster, [1, 4, 10], Casting.REASSIGN)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = SEED + s
+		var group_records: Array = []
+		var r: Dictionary = Night.run(
+			board.layout,
+			Night.LOOSE_INTERVAL,
+			rng,
+			90,
+			Walkthrough.PRIME_SCALE,
+			"",
+			0.0,
+			[],
+			group_records,
+		)
+		var t: Dictionary = Records.attribute(group_records, board, roster)
+		var screams := 0
+		var whiffs := 0
+		for a in t.actors.values():
+			screams += a.screams
+			whiffs += a.whiffs
+		check(
+			group_records.size() == r.groups,
+			"seed %d: %d records for %d groups" % [SEED + s, group_records.size(), r.groups],
+		)
+		check(
+			screams + t.machine.hits == roundi(r.real_hit_average * r.groups),
+			"seed %d: actor hits leak" % [SEED + s],
+		)
+		check(
+			whiffs + t.machine.whiffs == roundi(r.misses * r.groups),
+			"seed %d: whiffs leak" % [SEED + s],
+		)
+		check(
+			screams + t.machine.hits + t.effects.hits == roundi(r.hit_average * r.groups),
+			"seed %d: total hits leak" % [SEED + s],
+		)
