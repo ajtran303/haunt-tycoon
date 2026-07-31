@@ -525,9 +525,9 @@ func _night_finish(line: String) -> void:
 				var a: Dictionary = records.roster[i]
 				var card := "%s: %d screams, best night Oct %d" % [a.name, c.screams, c.best_night]
 				if c.assists > 0:
-						card += ", %d assists" % c.assists
+					card += ", %d assists" % c.assists
 				if a.observed_callouts > 0:
-						card += ", called out %d times" % a.observed_callouts
+					card += ", called out %s" % ("once" if a.observed_callouts == 1 else "%d times" % a.observed_callouts)
 				%NightLog.append_text(card + "\n")
 
 	refresh()
