@@ -57,6 +57,8 @@ var wom_hints := 0
 var wom_direction := 0
 
 const FINAL_WEEK_NIGHT := 25 # WOM_DELAY + rep drift ≈ a week
+var lock_note_shown := false
+var final_week_shown := false
 
 var weather: Array[String]
 
@@ -209,6 +211,8 @@ func slot_style(c: Color) -> StyleBoxFlat:
 func start_season() -> void:
 	night = 1
 	force_open = false
+	lock_note_shown = false
+	final_week_shown = false
 	weather = Calendar.roll_season(rng.randi())
 	roster_seed = rng.randi()
 	callout_rng.seed = rng.randi()
@@ -283,7 +287,7 @@ func refresh() -> void:
 		Color.INDIAN_RED if cash < 0.0 else Color.WHITE,
 	)
 	var day: String = Calendar.DAY_NAMES[Calendar.weekday(night)]
-	%NightLabel.text = "%s, Oct %d · %s" % [day, night, WEATHER_WORDS[weather[night - 1]]] if night <= Night.SEASON_NIGHTS else "Season over"
+	%NightLabel.text = "%s, Oct %d | %s" % [day, night, WEATHER_WORDS[weather[night - 1]]] if night <= Night.SEASON_NIGHTS else "Season over"
 	if night == Night.SEASON_NIGHTS:
 		%NightLabel.text = "Halloween · %s · %s" % [day, WEATHER_WORDS[weather[night - 1]]]
 
@@ -329,7 +333,7 @@ func refresh() -> void:
 			Casting.NEVER,
 		) + Night.upkeep_for(layout)
 		%CostPreview.text = (
-			"Quiet %s: maybe %d come through (~$%.0f at the door) against ~$%.0f to staff the rooms. Dark costs only the $%.0f overhead."
+			"Quiet %s: maybe %d come through (~$%.0f at the door) against ~$%.0f to staff the rooms. Dark costs only the $%.0f overhead per night."
 			% [
 				Calendar.DAY_NAMES[Calendar.weekday(night)],
 				gate,
@@ -337,6 +341,9 @@ func refresh() -> void:
 				staffing,
 				Night.NIGHTLY_OVERHEAD,
 			]
+		)
+		%OpenAnywayButton.text = "Open anyway (about −$%.0f)" % (
+			Night.NIGHTLY_OVERHEAD + staffing - door
 		)
 	else:
 		%CostPreview.text = "staff %d, $%.0f wages + upkeep tonight, + $%.2f marketing per visitor" % [
@@ -350,7 +357,6 @@ func refresh() -> void:
 			+ Night.upkeep_for(layout) + Night.NIGHTLY_OVERHEAD,
 			Night.MARKETING_PER_VISITOR,
 		]
-
 	var strain := "actors fully reset"
 	if interval <= PACES["Packed"]:
 		strain = "actors sprinting between scares"
@@ -364,7 +370,21 @@ func refresh() -> void:
 	%BlueprintNote.visible = night == 1
 
 	if not %RunButton.disabled and pending_absent.is_empty():
-		%RunButton.text = "Closed tonight (−$%.0f)" % Night.NIGHTLY_OVERHEAD if dark else "Run night"
+		if dark:
+			var n := dark_stretch()
+			if n == 1:
+				%RunButton.text = "Stay dark (−$%.0f)" % Night.NIGHTLY_OVERHEAD
+			elif night + n > Night.SEASON_NIGHTS:
+				%RunButton.text = "Dark to season's end (−$%.0f)" % (Night.NIGHTLY_OVERHEAD * n)
+			else:
+				%RunButton.text = "Dark until %s (−$%.0f)" % [
+					Calendar.DAY_NAMES[Calendar.weekday(night + n)],
+					Night.NIGHTLY_OVERHEAD * n,
+				]
+		else:
+			%RunButton.text = "Run night"
+
+	%OpenAnywayButton.visible = dark and pending_absent.is_empty() and not %RunButton.disabled
 
 	if not pending_absent.is_empty():
 		_preview_board()
@@ -380,11 +400,26 @@ func _on_run_night() -> void:
 	var demand := tonight_demand()
 
 	if not force_open and Allocation.is_dark(layout, demand, night):
-		cash -= Night.NIGHTLY_OVERHEAD
-		_night_finish(
-			"[b]%s, Oct %d[/b]  Closed tonight: too few would come out to cover the cast. −$%.0f keeps the lights on."
-			% [Calendar.DAY_NAMES[Calendar.weekday(night)], night, Night.NIGHTLY_OVERHEAD]
-		)
+		var n := dark_stretch()
+		cash -= Night.NIGHTLY_OVERHEAD * n
+		var first := night
+		night += n - 1 # _night_finish adds the last increment
+		if n == 1:
+			_night_finish(
+				"[b]%s, Oct %d[/b]  Closed tonight: too few would come out to cover the cast. −$%.0f keeps the lights on."
+				% [Calendar.DAY_NAMES[Calendar.weekday(first)], first, Night.NIGHTLY_OVERHEAD]
+			)
+		else:
+			_night_finish(
+				"[color=#8d99ae][b]%s–%s, Oct %d–%d[/b]  Dark through the week (−$%.0f overhead).[/color]"
+				% [
+					Calendar.DAY_NAMES[Calendar.weekday(first)],
+					Calendar.DAY_NAMES[Calendar.weekday(night)],
+					first,
+					night,
+					Night.NIGHTLY_OVERHEAD * n,
+				]
+			)
 		return
 
 	if pending_absent.is_empty():
@@ -421,35 +456,34 @@ func _night_finish(line: String) -> void:
 
 	for b in %SlotRow.get_children():
 		b.modulate = Color.WHITE
-	%NightLog.append_text(line + "\n")
 	night += 1
-	if not %RunButton.disabled:
-		var dark := (
-			night <= Night.SEASON_NIGHTS and Allocation.is_dark(layout, tonight_demand(), night)
-		)
-		%RunButton.text = "Closed tonight (−$%.0f)" % Night.NIGHTLY_OVERHEAD if dark else "Run night"
+	if night <= Night.SEASON_NIGHTS and weather[night - 1] != "clear":
+		line += " [color=#8d99ae]Forecast for %s: %s.[/color]" % [
+			Calendar.DAY_NAMES[Calendar.weekday(night)],
+			WEATHER_WORDS[weather[night - 1]],
+		]
+	%NightLog.append_text(line + "\n")
+
 	if cash < Night.LOAN_LIMIT:
 		%NightLog.append_text("[color=#ef5350]The bank calls your loan. Season over.[/color]\n")
 		%RunButton.text = "Bankrupt: %s" % money(cash)
 		%RunButton.disabled = true
 		refresh()
 		return
-	if night == 2:
+	if not lock_note_shown and night >= 2:
+		lock_note_shown = true
 		%NightLog.append_text(
 			"[color=#8d99ae]The doors are open. The building is set for the season.[/color]\n"
 		)
-	if night == FINAL_WEEK_NIGHT:
+	if not final_week_shown and night >= FINAL_WEEK_NIGHT:
+		final_week_shown = true
 		%NightLog.append_text(
 			"[color=#8d99ae]Final week. Whatever the town says about you now, it won't get around before Halloween.[/color]\n"
 		)
 	if night > Night.SEASON_NIGHTS:
 		%RunButton.text = "Season over: %s" % money(cash)
 		%RunButton.disabled = true
-	else:
-		%NightLog.append_text(
-			"[color=#8d99ae]Forecast for %s: %s.[/color]\n"
-			% [Calendar.DAY_NAMES[Calendar.weekday(night)], WEATHER_WORDS[weather[night - 1]]]
-		)
+
 	refresh()
 
 
@@ -502,10 +536,22 @@ func money(x: float) -> String:
 	return "-$%.0f" % absf(x) if x < 0.0 else "$%.0f" % x
 
 
+func demand_for(n: int) -> int:
+	return int(town.demand() * Calendar.weight_for(n) * Calendar.WEATHER[weather[n - 1]].mult)
+
+
 func tonight_demand() -> int:
-	return int(
-		town.demand() * Calendar.weight_for(night) * Calendar.WEATHER[weather[night - 1]].mult
-	)
+	return demand_for(night)
+
+
+func dark_stretch() -> int:
+	var n := 0
+	while (
+		night + n <= Night.SEASON_NIGHTS
+		and Allocation.is_dark(layout, demand_for(night + n), night + n)
+	):
+		n += 1
+	return n
 
 
 func _on_back_to_planning() -> void:
@@ -542,7 +588,7 @@ func _preview_board() -> void:
 		if room == layout[i]:
 			b.text = slot_caption(i, assignment)
 		elif room == Rooms.CORRIDOR:
-			b.text = "%s\ndark" % TOOLS[layout[i]].to_upper()
+			b.text = "%s\nempty" % TOOLS[layout[i]].to_upper()
 		else: # only remaining downgrade: pair scare running as a single
 			color = ROOM_COLORS[Rooms.PAIR_SCARE].lerp(ROOM_COLORS[Rooms.SCARE], 0.5)
 			b.text = "PAIR SCARE\nas single"
@@ -625,9 +671,9 @@ func _show_banner() -> void:
 	for i in layout.size():
 		if Casting.needs_for(layout[i]) > 0 and never_board.layout[i] == Rooms.CORRIDOR:
 			goes_dark = true
-	%DarkButton.text = "Leave it dark" if goes_dark else "Play on short"
+	%DarkButton.text = "Leave it empty" if goes_dark else "Play on short"
 	%DarkButton.tooltip_text = (
-		"Accept the hole; that room plays as a corridor tonight."
+		"Accept the hole; that room is empty tonight."
 		if goes_dark
 		else "Accept it; the scene runs without the full cast."
 	)
@@ -781,7 +827,7 @@ func slot_caption(i: int, assignment: Dictionary) -> String:
 		else:
 			short = true
 	if short:
-		return "%s\nshort-staffed" % label
+		return "%s\nshort" % label
 	if inits.size() == 4:
 		return "%s\n%s %s\n%s %s" % [label, inits[0], inits[1], inits[2], inits[3]]
 	return "%s\n%s" % [label, " ".join(inits)]
