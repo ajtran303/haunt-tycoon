@@ -47,6 +47,7 @@ static func run_season(
 	policy: int = Casting.REASSIGN,
 	callouts: bool = true,
 	records: Variant = null,
+	phases: Variant = null,
 ) -> Array[Dictionary]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_val
@@ -70,12 +71,19 @@ static func run_season(
 		records.box = []
 
 	var headcount := Night.actors_for(layout)
-	var town := Town.new(starting_rep_for(alloc.marketing))
-
-	var cash: float = Night.STARTING_CASH \
-			- Night.build_cost_for(layout) \
-			- alloc.quality \
-			- alloc.marketing
+	var town: Town
+	var cash: float
+	var presale_pool := 0
+	if phases == null:
+		town = Town.new(starting_rep_for(alloc.marketing))
+		cash = Night.STARTING_CASH \
+				- Night.build_cost_for(layout) \
+				- alloc.quality \
+				- alloc.marketing
+	else:
+		town = Town.new(starting_rep_for(phases.awareness))
+		cash = phases.cash
+		presale_pool = phases.presold
 
 	var trajectory: Array[Dictionary] = []
 	var weather := Calendar.roll_season(seed_val)
@@ -85,18 +93,20 @@ static func run_season(
 		var board: Dictionary = Casting.resolve(layout, roster, absent, policy)
 		var tonight: Array = board.layout
 
-		var demand := int(
+		var organic := int(
 			town.demand() * Calendar.weight_for(night + 1) * Calendar.WEATHER[weather[night]].mult
 		)
 
-		var is_dark_night := is_dark(tonight, demand, night + 1)
+		var is_dark_night := is_dark(tonight, organic, night + 1)
 
 		var revenue := 0.0
+		var redeemed := 0
 		if is_dark_night:
 			cash -= Night.NIGHTLY_OVERHEAD
 		else:
 			for i in absent:
 				roster[i].observed_callouts += 1
+			var demand := organic + presale_pool
 			var loose_cap := int(Night.NIGHT_SECONDS / Night.LOOSE_INTERVAL) * Night.GROUP_SIZE
 			var interval := Night.PACKED_INTERVAL if demand > loose_cap else Night.LOOSE_INTERVAL
 			interval = maxf(interval, floor_interval)
@@ -115,11 +125,14 @@ static func run_season(
 				bonus_row,
 				group_records,
 			)
-			cash += r.profit - (
+			redeemed = mini(presale_pool, r.groups * Night.GROUP_SIZE)
+			presale_pool -= redeemed
+			var comped := redeemed * Night.TICKET_PRICE
+			cash += r.profit - comped - (
 				roster_wages(roster, headcount, absent, policy) - Night.wages_for(tonight)
 			)
 			town.record_night(r.satisfaction)
-			revenue = r.tickets + r.gift
+			revenue = r.tickets + r.gift - comped
 			if records != null:
 				Records.digest(
 					records,
@@ -132,12 +145,25 @@ static func run_season(
 					r,
 				)
 
-		trajectory.append({ cash = cash, revenue = revenue })
+		trajectory.append({ cash = cash, revenue = revenue, redeemed = redeemed })
 		if cash < Night.LOAN_LIMIT:
 			while trajectory.size() < Night.SEASON_NIGHTS:
-				trajectory.append({ cash = cash, revenue = 0.0 })
+				trajectory.append({ cash = cash, revenue = 0.0, redeemed = 0 })
 			break
 	return trajectory
+
+
+static func run_preseason(
+	alloc: Dictionary,
+	seed_val: int,
+	preview_played := true,
+	discount := Preseason.PRESALE_DISCOUNT,
+) -> Dictionary:
+	var roster_rng := RandomNumberGenerator.new()
+	roster_rng.seed = seed_val + 300_000
+	var layout := layout_for(alloc.build)
+	var roster := roster_for(alloc, roster_rng)
+	return Preseason.run_phases(alloc, layout, roster.size(), preview_played, discount)
 
 
 static func layout_for(build_budget: float) -> Array:
