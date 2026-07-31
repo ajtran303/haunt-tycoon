@@ -11,6 +11,9 @@ const LAYOUT := ["a", "g", "e", "g", "g", "p", "n", "g", "g", "a"]
 const SEED := 12345
 const SEEDS := 20
 
+const BUILD_HEAVY := { build = 23_000.0, quality = 0.0, depth = 0.0, marketing = 1_000.0 }
+const CAST_HEAVY := { build = 9_500.0, quality = 14_000.0, depth = 5_000.0, marketing = 1_000.0 }
+
 var failed := 0
 
 
@@ -21,6 +24,7 @@ func _initialize() -> void:
 	season_collector_changes_nothing()
 	quiet_night_no_card()
 	claims_are_honest()
+	full_season_conservation()
 	print("PASS: records invariants hold" if failed == 0 else "FAIL: %d broken" % failed)
 	quit(1 if failed > 0 else 0)
 
@@ -247,3 +251,29 @@ func claims_are_honest() -> void:
 					_:
 						failed += 1
 						print("FAIL: %s: unknown claim kind" % where)
+
+
+func full_season_conservation() -> void:
+	for alloc in [BUILD_HEAVY, CAST_HEAVY]:
+		for s in 5:
+			var off: Array[Dictionary] = Allocation.run_season(alloc, SEED + s)
+			var records := { }
+			var on: Array[Dictionary] = Allocation.run_season(
+				alloc,
+				SEED + s,
+				Casting.REASSIGN,
+				true,
+				records,
+			)
+			check(off == on, "seed %d: collector changed gate finals" % [SEED + s])
+			for row in records.box:
+				var where := "seed %d night %d" % [SEED + s, row.night]
+				check(
+					row.screams + row.machine_hits == row.actor_hits,
+					"%s: actor hits leak" % where,
+				)
+				check(row.whiffs + row.machine_whiffs == row.misses, "%s: whiffs leak" % where)
+				check(
+					row.screams + row.machine_hits + row.effect_hits == row.hits,
+					"%s: total hits leak" % where,
+				)

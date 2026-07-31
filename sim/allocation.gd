@@ -64,6 +64,7 @@ static func run_season(
 		records.roster = roster
 		records.careers = { }
 		records.nights = []
+		records.box = []
 
 	var headcount := Night.actors_for(layout)
 	var town := Town.new(starting_rep_for(alloc.marketing))
@@ -116,7 +117,7 @@ static func run_season(
 			town.record_night(r.satisfaction)
 			revenue = r.tickets + r.gift
 			if records != null:
-				Records.digest(records, group_records, board, roster, night + 1, sample_rng, town.rep)
+				Records.digest(records, group_records, board, roster, night + 1, sample_rng, town.rep, r)
 
 		trajectory.append({ cash = cash, revenue = revenue })
 		if cash < Night.LOAN_LIMIT:

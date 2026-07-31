@@ -111,6 +111,7 @@ static func digest(
 	night: int,
 	sample_rng: RandomNumberGenerator,
 	rep: float,
+	result: Dictionary,
 ) -> void:
 	var t := attribute(group_records, board, roster)
 	for i in t.actors:
@@ -123,6 +124,25 @@ static func digest(
 		if a.screams > c.best_screams:
 			c.best_screams = a.screams
 			c.best_night = night
+	var screams := 0
+	var whiffs := 0
+	for a in t.actors.values():
+		screams += a.screams
+		whiffs += a.whiffs
+	if result.groups != 0:
+		records.box.append(
+			{
+				night = night,
+				screams = screams,
+				whiffs = whiffs,
+				machine_hits = t.machine.hits,
+				machine_whiffs = t.machine.whiffs,
+				effect_hits = t.effects.hits,
+				actor_hits = roundi(result.real_hit_average * result.groups),
+				misses = roundi(result.misses * result.groups),
+				hits = roundi(result.hit_average * result.groups),
+			}
+		)
 	for room_i in board.present:
 		for actor_i in board.present[room_i]:
 			career(records.careers, actor_i).nights_worked += 1
