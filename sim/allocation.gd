@@ -7,6 +7,7 @@ const Calendar = preload("res://sim/calendar.gd")
 const Roster = preload("res://sim/roster.gd")
 const Casting = preload("res://sim/casting.gd")
 const Records = preload("res://sim/records.gd")
+const Preseason = preload("res://sim/preseason.gd")
 
 const ROOMS := 10
 const SCARE_MARGINAL := 1_500.0 # BUILD_COST.a - BUILD_COST.g
@@ -57,6 +58,8 @@ static func run_season(
 	var layout := layout_for(alloc.build)
 	var roster := roster_for(alloc, roster_rng)
 
+	var floor_interval := Preseason.dispatch_floor(layout)
+
 	var sample_rng := RandomNumberGenerator.new()
 	sample_rng.seed = seed_val + 400_000
 	if records != null:
@@ -96,6 +99,7 @@ static func run_season(
 				roster[i].observed_callouts += 1
 			var loose_cap := int(Night.NIGHT_SECONDS / Night.LOOSE_INTERVAL) * Night.GROUP_SIZE
 			var interval := Night.PACKED_INTERVAL if demand > loose_cap else Night.LOOSE_INTERVAL
+			interval = maxf(interval, floor_interval)
 			var bonus_row: Array = []
 			for c in board.ceilings:
 				bonus_row.append(effective_bonus(c, interval))
@@ -117,7 +121,16 @@ static func run_season(
 			town.record_night(r.satisfaction)
 			revenue = r.tickets + r.gift
 			if records != null:
-				Records.digest(records, group_records, board, roster, night + 1, sample_rng, town.rep, r)
+				Records.digest(
+					records,
+					group_records,
+					board,
+					roster,
+					night + 1,
+					sample_rng,
+					town.rep,
+					r,
+				)
 
 		trajectory.append({ cash = cash, revenue = revenue })
 		if cash < Night.LOAN_LIMIT:
