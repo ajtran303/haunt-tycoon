@@ -7,6 +7,8 @@ const BORE_STRETCH := 2
 const VERDICT_HIGH := 75.0
 const VERDICT_LOW := 40.0
 
+const BEST_WORTH_TELLING := 70.0
+
 const VOICE := {
 	thrill_seeker = {
 		verdict_high = "Okay. THAT one. First haunt this year that got a flinch out of me.",
@@ -177,7 +179,7 @@ static func career(careers: Dictionary, i: int) -> Dictionary:
 
 static func claims(rec: Dictionary, built: Array) -> Array:
 	var out := []
-	var best := -1
+	var best_ties: Array = []
 	var last_scare := -1
 	for j in rec.events.size():
 		var e: Dictionary = rec.events[j]
@@ -191,10 +193,13 @@ static func claims(rec: Dictionary, built: Array) -> Array:
 				out.append({ kind = "whiff", room = e.room, source = j })
 				last_scare = j
 			_:
-				if best == -1 or e.reaction > rec.events[best].reaction:
-					best = j
+				if best_ties.is_empty() or e.reaction > rec.events[best_ties[0]].reaction:
+					best_ties = [j]
+				elif e.reaction == rec.events[best_ties[0]].reaction:
+					best_ties.append(j)
 				last_scare = j
-	if best != -1:
+	if not best_ties.is_empty():
+		var best: int = best_ties[rec.night % best_ties.size()]
 		out.append({ kind = "best_moment", room = rec.events[best].room, source = best })
 	if last_scare != -1 and rec.events[last_scare].kind in ["whiff", "anim_whiff"]:
 		out.append(
@@ -251,7 +256,10 @@ static func render(rec: Dictionary, claim_list: Array) -> String:
 		extras.append(v.dead_room.format({ room = dead[0].room + 1 }))
 	if by_kind.has("fizzled_ending"):
 		extras.append(v.fizzled_ending)
-	if by_kind.has("best_moment") and rec.satisfaction >= VERDICT_LOW:
+	if (
+		by_kind.has("best_moment") and rec.satisfaction >= VERDICT_LOW
+		and rec.events[by_kind.best_moment.source].reaction >= BEST_WORTH_TELLING
+	):
 		extras.append(v.best_moment.format({ room = by_kind.best_moment.room + 1 }))
 	if by_kind.has("bore"):
 		extras.append(v.bore)
