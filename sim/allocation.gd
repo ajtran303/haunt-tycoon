@@ -82,6 +82,9 @@ static func run_season(
 				- alloc.marketing
 	else:
 		town = Town.new(starting_rep_for(phases.awareness))
+		if phases.preview_sat >= 0.0:
+			for i in town.heard.size():
+				town.heard[i] = lerpf(town.heard[i], phases.preview_sat, Preseason.PREVIEW_WEIGHT)
 		cash = phases.cash
 		presale_pool = phases.presold
 
@@ -158,12 +161,40 @@ static func run_preseason(
 	seed_val: int,
 	preview_played := true,
 	discount := Preseason.PRESALE_DISCOUNT,
+	policy: int = Casting.REASSIGN,
 ) -> Dictionary:
 	var roster_rng := RandomNumberGenerator.new()
 	roster_rng.seed = seed_val + 300_000
 	var layout := layout_for(alloc.build)
 	var roster := roster_for(alloc, roster_rng)
-	return Preseason.run_phases(alloc, layout, roster.size(), preview_played, discount)
+	var phases := Preseason.run_phases(alloc, layout, roster.size(), preview_played, discount)
+	if preview_played:
+		phases.preview_sat = preview(alloc, seed_val, policy)
+	return phases
+
+
+static func preview(alloc: Dictionary, seed_val: int, policy: int = Casting.REASSIGN) -> float:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_val + 500_000
+	var roster_rng := RandomNumberGenerator.new()
+	roster_rng.seed = seed_val + 300_000
+	var layout := layout_for(alloc.build)
+	var roster := roster_for(alloc, roster_rng)
+	var board: Dictionary = Casting.resolve(layout, roster, [], policy)
+	var bonus_row: Array = []
+	for c in board.ceilings:
+		bonus_row.append(effective_bonus(c, Night.LOOSE_INTERVAL))
+	var r: Dictionary = Night.run(
+		board.layout,
+		Night.LOOSE_INTERVAL,
+		rng,
+		Preseason.PREVIEW_DEMAND,
+		Walkthrough.PRIME_SCALE,
+		"",
+		0.0,
+		bonus_row,
+	)
+	return r.satisfaction
 
 
 static func layout_for(build_budget: float) -> Array:
