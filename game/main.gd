@@ -8,6 +8,7 @@ const Calendar = preload("res://sim/calendar.gd")
 const Casting = preload("res://sim/casting.gd")
 const Roster = preload("res://sim/roster.gd")
 const Walkthrough = preload("res://sim/walkthrough.gd")
+const Records = preload("res://sim/records.gd")
 
 const ROOM_SLOTS := 10
 
@@ -95,6 +96,10 @@ const CONSEQUENCES := {
 const COUNT_WORDS := ["", "", "Both", "Three", "Four", "Five"]
 
 var force_open := false
+
+var records := { }
+var sample_rng := RandomNumberGenerator.new()
+var reviews_shown := 0
 
 
 func _ready() -> void:
@@ -201,6 +206,15 @@ func _refresh_roster_strip() -> void:
 			chip.tooltip_text = "$%.0f a night" % a.wage
 			chip.modulate = Color.WHITE
 		chip.text = text
+		if records.has("careers") and records.careers.has(i):
+			var c: Dictionary = records.careers[i]
+			chip.tooltip_text += "\n%d screams | %d whiffs | best night Oct %d" % [
+				c.screams,
+				c.whiffs,
+				c.best_night,
+			]
+			if c.assists > 0:
+				chip.tooltip_text += " | %d assists" % c.assists
 
 
 func slot_style(c: Color) -> StyleBoxFlat:
@@ -218,6 +232,9 @@ func start_season() -> void:
 	weather = Calendar.roll_season(rng.randi())
 	roster_seed = rng.randi()
 	callout_rng.seed = rng.randi()
+	records = { careers = { }, nights = [], box = [] }
+	sample_rng.seed = rng.randi()
+	reviews_shown = 0
 
 	if not GameState.alloc.is_empty():
 		var a: Dictionary = GameState.alloc
@@ -458,7 +475,26 @@ func _night_finish(line: String) -> void:
 
 	for b in %SlotRow.get_children():
 		b.modulate = Color.WHITE
+
 	night += 1
+
+	var finished := night - 1
+	while reviews_shown < records.nights.size():
+		var rec: Dictionary = records.nights[reviews_shown]
+		if rec.night + Town.WOM_DELAY > finished:
+			break
+		reviews_shown += 1
+		var cl := Records.claims(rec, records.built)
+		if Records.salient(rec, cl):
+			%NightLog.append_text(
+				"[color=#e0a458]Overheard, about %s Oct %d:[/color] [i]%s[/i]\n"
+				% [
+					Calendar.DAY_NAMES[Calendar.weekday(rec.night)],
+					rec.night,
+					Records.render(rec, cl),
+				]
+			)
+
 	if night <= Night.SEASON_NIGHTS and weather[night - 1] != "clear":
 		line += " [color=#8d99ae]Forecast for %s: %s.[/color]" % [
 			Calendar.DAY_NAMES[Calendar.weekday(night)],
@@ -483,6 +519,16 @@ func _night_finish(line: String) -> void:
 	if night > Night.SEASON_NIGHTS:
 		%RunButton.text = "Season over: %s" % money(cash)
 		%RunButton.disabled = true
+		%NightLog.append_text("[b]The season, actor by actor:[/b]\n")
+		for i in records.careers:
+				var c: Dictionary = records.careers[i]
+				var a: Dictionary = records.roster[i]
+				var card := "%s: %d screams, best night Oct %d" % [a.name, c.screams, c.best_night]
+				if c.assists > 0:
+						card += ", %d assists" % c.assists
+				if a.observed_callouts > 0:
+						card += ", called out %d times" % a.observed_callouts
+				%NightLog.append_text(card + "\n")
 
 	refresh()
 
@@ -731,6 +777,7 @@ func _resolve_and_run(demand: int) -> void:
 	var bonus_row: Array = []
 	for c in board.ceilings:
 		bonus_row.append(Allocation.effective_bonus(c, interval))
+	var group_records: Array = []
 	var r: Dictionary = Night.run(
 		board.layout,
 		interval,
@@ -740,7 +787,11 @@ func _resolve_and_run(demand: int) -> void:
 		"",
 		0.0,
 		bonus_row,
+		group_records,
 	)
+	if not records.has("built"):
+		records.built = layout.duplicate()
+		records.roster = roster
 	var headcount := mini(Night.actors_for(layout), roster.size())
 	var wage_fix := Allocation.roster_wages(roster, headcount, absent, policy) \
 			- Night.wages_for(board.layout)
@@ -748,6 +799,7 @@ func _resolve_and_run(demand: int) -> void:
 	var capacity := int(Night.NIGHT_SECONDS / interval)
 	var sold_out: bool = demand / Night.GROUP_SIZE > capacity
 	town.record_night(r.satisfaction)
+	Records.digest(records, group_records, board, roster, night, sample_rng, town.rep, r)
 	var color := "66bb6a" if profit >= 0.0 else "ef5350"
 	var line := "[b]%s, Oct %d[/b]  %d visitors × $%.0f tickets + $%.0f souvenirs, photos & merch − $%.0f costs = [color=#%s]%s[/color] %s" % [
 		Calendar.DAY_NAMES[Calendar.weekday(night)],
