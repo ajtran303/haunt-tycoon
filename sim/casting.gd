@@ -123,7 +123,7 @@ static func downgrade(layout: Array, roster: Array[Dictionary], present: Diction
 		for a in here:
 			sum += roster[a].skill
 		ceilings[i] = sum / here.size()
-	return { layout = tonight, ceilings = ceilings }
+	return { layout = tonight, ceilings = ceilings, present = present }
 
 
 static func harvest_surplus(layout: Array, present: Dictionary) -> void:

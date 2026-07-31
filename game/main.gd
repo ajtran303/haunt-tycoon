@@ -158,10 +158,10 @@ func _build_callout_banner() -> void:
 	%BannerLabel.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	%BannerLabel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var response_group := ButtonGroup.new()
-	for b in [%DarkButton, %RespondButton]:
+	for b in [%AcceptButton, %RespondButton]:
 		b.toggle_mode = true
 		b.button_group = response_group
-	%DarkButton.pressed.connect(
+	%AcceptButton.pressed.connect(
 		func():
 			_choose_policy(Casting.NEVER),
 	)
@@ -169,6 +169,8 @@ func _build_callout_banner() -> void:
 		func():
 			_choose_policy(Casting.REASSIGN),
 	)
+
+	%GoDarkButton.pressed.connect(_on_go_dark)
 
 
 func _build_roster_strip() -> void:
@@ -187,11 +189,11 @@ func _refresh_roster_strip() -> void:
 	for i in %RosterStrip.get_child_count():
 		var chip: Button = %RosterStrip.get_child(i)
 		var a: Dictionary = roster[i]
-		var text := "%s · %s" % [a.name, skill_word(a.skill)]
+		var text := "%s | %s" % [a.name, skill_word(a.skill)]
 		if a.observed_callouts > 0:
 			text += " ×%d" % a.observed_callouts
 		if i >= headcount:
-			text += " · on call"
+			text += " | on call"
 			chip.tooltip_text = "on call: $%.0f a night when idle, $%.0f when they perform" \
 					% [Allocation.ON_CALL_WAGE, a.wage]
 			chip.modulate = Color(1.0, 1.0, 1.0, 0.55)
@@ -289,7 +291,7 @@ func refresh() -> void:
 	var day: String = Calendar.DAY_NAMES[Calendar.weekday(night)]
 	%NightLabel.text = "%s, Oct %d | %s" % [day, night, WEATHER_WORDS[weather[night - 1]]] if night <= Night.SEASON_NIGHTS else "Season over"
 	if night == Night.SEASON_NIGHTS:
-		%NightLabel.text = "Halloween · %s · %s" % [day, WEATHER_WORDS[weather[night - 1]]]
+		%NightLabel.text = "Halloween | %s | %s" % [day, WEATHER_WORDS[weather[night - 1]]]
 
 	var assignment: Dictionary = Casting.auto_assign(layout)
 
@@ -472,9 +474,7 @@ func _night_finish(line: String) -> void:
 		return
 	if not lock_note_shown and night >= 2:
 		lock_note_shown = true
-		%NightLog.append_text(
-			"[color=#8d99ae]The doors are open. The building is set for the season.[/color]\n"
-		)
+		%NightLog.append_text("[color=#8d99ae]The building is set for the season.[/color]\n")
 	if not final_week_shown and night >= FINAL_WEEK_NIGHT:
 		final_week_shown = true
 		%NightLog.append_text(
@@ -585,13 +585,24 @@ func _preview_board() -> void:
 		var b: Button = %SlotRow.get_child(i)
 		var room: String = board.layout[i]
 		var color: Color = ROOM_COLORS[room]
-		if room == layout[i]:
+		if Casting.needs_for(layout[i]) == 0:
 			b.text = slot_caption(i, assignment)
 		elif room == Rooms.CORRIDOR:
 			b.text = "%s\nempty" % TOOLS[layout[i]].to_upper()
-		else: # only remaining downgrade: pair scare running as a single
-			color = ROOM_COLORS[Rooms.PAIR_SCARE].lerp(ROOM_COLORS[Rooms.SCARE], 0.5)
-			b.text = "PAIR SCARE\nas single"
+		else:
+			var inits := []
+			for ai in board.present[i]:
+				inits.append(initials(roster[ai].name))
+			var lines := [TOOLS[layout[i]].to_upper()]
+			if room != layout[i]:
+				color = ROOM_COLORS[Rooms.PAIR_SCARE].lerp(ROOM_COLORS[Rooms.SCARE], 0.5)
+				lines.append("as single")
+			if inits.size() == 4:
+				lines.append("%s %s" % [inits[0], inits[1]])
+				lines.append("%s %s" % [inits[2], inits[3]])
+			else:
+				lines.append(" ".join(inits))
+			b.text = "\n".join(lines)
 		b.add_theme_stylebox_override("normal", slot_style(color))
 		b.add_theme_stylebox_override("hover", slot_style(color.lightened(0.15)))
 		b.add_theme_stylebox_override("pressed", slot_style(color.darkened(0.15)))
@@ -643,6 +654,16 @@ func _show_banner() -> void:
 		if never_board.layout[i] == Rooms.CORRIDOR and re_board.layout[i] != Rooms.CORRIDOR:
 			reopened.append(i + 1)
 
+	var show_gone := true
+	for i in layout.size():
+		if layout[i] == Rooms.ANIMATRONIC or layout[i] == Rooms.EFFECT:
+			show_gone = false
+		elif Casting.needs_for(layout[i]) > 0 and re_board.layout[i] != Rooms.CORRIDOR:
+			show_gone = false
+	%GoDarkButton.visible = show_gone
+	%GoDarkButton.text = "Go dark (−$%.0f)" % Night.NIGHTLY_OVERHEAD
+	%GoDarkButton.tooltip_text = "Don't open. Overhead only, and the town hears nothing about tonight."
+
 	if bench_free > 0:
 		%RespondButton.text = "Send in %s" % next_up
 	elif not reopened.is_empty():
@@ -664,15 +685,15 @@ func _show_banner() -> void:
 			"Reopens room %d with an actor the board can spare tonight." % reopened[0]
 		)
 
-	%DarkButton.button_pressed = true
+	%AcceptButton.button_pressed = true
 	pending_policy = Casting.NEVER
 
 	var goes_dark := false
 	for i in layout.size():
 		if Casting.needs_for(layout[i]) > 0 and never_board.layout[i] == Rooms.CORRIDOR:
 			goes_dark = true
-	%DarkButton.text = "Leave it empty" if goes_dark else "Play on short"
-	%DarkButton.tooltip_text = (
+	%AcceptButton.text = "Leave it empty" if goes_dark else "Play on short"
+	%AcceptButton.tooltip_text = (
 		"Accept the hole; that room is empty tonight."
 		if goes_dark
 		else "Accept it; the scene runs without the full cast."
@@ -851,3 +872,24 @@ func name_list(group: Array) -> String:
 func name_tag(a: Dictionary) -> String:
 	var nth: int = a.observed_callouts + 1
 	return a.name if nth == 1 else "%s (%s time)" % [a.name, ordinal(nth)]
+
+
+func _on_go_dark() -> void:
+	force_open = false
+	var names := []
+	for i in pending_absent:
+		roster[i].observed_callouts += 1
+		names.append(roster[i].name)
+	pending_absent = []
+	pending_policy = Casting.NEVER
+	%CalloutBanner.visible = false
+	cash -= Night.NIGHTLY_OVERHEAD
+	var cause: String = (
+		"%s's callout gutted the show" % names[0]
+		if names.size() == 1
+		else "callouts gutted the show"
+	)
+	_night_finish(
+		"[b]%s, Oct %d[/b]  Dark tonight: %s, and you kept the doors shut. −$%.0f keeps the lights on."
+		% [Calendar.DAY_NAMES[Calendar.weekday(night)], night, cause, Night.NIGHTLY_OVERHEAD]
+	)
