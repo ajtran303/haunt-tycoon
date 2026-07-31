@@ -190,12 +190,28 @@ func quiet_night_no_card() -> void:
 	check(not Records.salient(quiet, Records.claims(quiet, built)), "quiet night made a card")
 
 	var deviant: Dictionary = quiet.duplicate(true)
-	deviant.satisfaction = 85.0
+	deviant.satisfaction = 30.0
 	check(Records.salient(deviant, Records.claims(deviant, built)), "deviation didn't fire")
+
+	var near_margin: Dictionary = quiet.duplicate(true)
+	near_margin.satisfaction = 80.0
+	check(
+		not Records.salient(near_margin, Records.claims(near_margin, built)),
+		"sub-margin deviation made a card",
+	)
 
 	var fizzled: Dictionary = quiet.duplicate(true)
 	fizzled.events[4] = { room = 4, kind = "whiff", reaction = 0.0, bore = 0.0 }
 	check(Records.salient(fizzled, Records.claims(fizzled, built)), "fizzle didn't fire")
+
+	var good_fizzle: Dictionary = quiet.duplicate(true)
+	good_fizzle.events[4] = { room = 4, kind = "whiff", reaction = 0.0, bore = 0.0 }
+	good_fizzle.satisfaction = 80.0
+	good_fizzle.reputation = 80.0
+	check(
+		not Records.salient(good_fizzle, Records.claims(good_fizzle, built)),
+		"uncorroborated fizzle made a card",
+	)
 
 	var dark: Dictionary = quiet.duplicate(true)
 	dark.events[2] = { room = 2, kind = "corridor", reaction = 0.0, bore = 0.0 }

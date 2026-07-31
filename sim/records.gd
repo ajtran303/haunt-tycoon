@@ -1,6 +1,6 @@
 const Rooms = preload("res://sim/rooms.gd")
 
-const SALIENCE_MARGIN := 15.0 # rep deviation that makes a night worth talking about
+const SALIENCE_MARGIN := 25.0 # rep deviation that makes a night worth talking about
 const STANDOUT_SAT := 90.0
 const BORE_STRETCH := 2
 
@@ -213,7 +213,10 @@ static func salient(rec: Dictionary, claim_list: Array) -> bool:
 	var prev_source := -2
 	for c in claim_list:
 		match c.kind:
-			"fizzled_ending", "dead_room":
+			"fizzled_ending":
+				if rec.satisfaction < VERDICT_HIGH:
+					return true
+			"dead_room":
 				return true
 			"bore":
 				bore_run = bore_run + 1 if c.source == prev_source + 1 else 1
@@ -248,7 +251,7 @@ static func render(rec: Dictionary, claim_list: Array) -> String:
 		extras.append(v.dead_room.format({ room = dead[0].room + 1 }))
 	if by_kind.has("fizzled_ending"):
 		extras.append(v.fizzled_ending)
-	if by_kind.has("best_moment"):
+	if by_kind.has("best_moment") and rec.satisfaction >= VERDICT_LOW:
 		extras.append(v.best_moment.format({ room = by_kind.best_moment.room + 1 }))
 	if by_kind.has("bore"):
 		extras.append(v.bore)
