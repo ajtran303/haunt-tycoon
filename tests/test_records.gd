@@ -19,6 +19,8 @@ func _initialize() -> void:
 	collector_changes_nothing()
 	night_conservation()
 	season_collector_changes_nothing()
+	quiet_night_no_card()
+	claims_are_honest()
 	print("PASS: records invariants hold" if failed == 0 else "FAIL: %d broken" % failed)
 	quit(1 if failed > 0 else 0)
 
@@ -163,3 +165,85 @@ func season_collector_changes_nothing() -> void:
 		check(off == on, "seed %d: records collector changed the season" % [SEED + s])
 		check(not records.nights.is_empty(), "seed %d: no nights sampled" % [SEED + s])
 		check(not records.careers.is_empty(), "seed %d: no careers accumulated" % [SEED + s])
+
+
+func quiet_night_no_card() -> void:
+	var built := ["a", "g", "a", "g", "a"]
+	var quiet := {
+		night = 8,
+		type = "skeptic",
+		satisfaction = 60.0,
+		reputation = 60.0,
+		tonight = built,
+		events = [
+			{ room = 0, kind = "hit", reaction = 60.0, bore = 0.0 },
+			{ room = 1, kind = "corridor", reaction = 0.0, bore = 0.0 },
+			{ room = 2, kind = "hit", reaction = 55.0, bore = 0.0 },
+			{ room = 3, kind = "corridor", reaction = 0.0, bore = 0.0 },
+			{ room = 4, kind = "hit", reaction = 50.0, bore = 0.0 },
+		],
+	}
+	check(not Records.salient(quiet, Records.claims(quiet, built)), "quiet night made a card")
+
+	var deviant: Dictionary = quiet.duplicate(true)
+	deviant.satisfaction = 85.0
+	check(Records.salient(deviant, Records.claims(deviant, built)), "deviation didn't fire")
+
+	var fizzled: Dictionary = quiet.duplicate(true)
+	fizzled.events[4] = { room = 4, kind = "whiff", reaction = 0.0, bore = 0.0 }
+	check(Records.salient(fizzled, Records.claims(fizzled, built)), "fizzle didn't fire")
+
+	var dark: Dictionary = quiet.duplicate(true)
+	dark.events[2] = { room = 2, kind = "corridor", reaction = 0.0, bore = 0.0 }
+	check(Records.salient(dark, Records.claims(dark, built)), "dead room didn't fire")
+
+
+func claims_are_honest() -> void:
+	var alloc := { build = 11_000.0, quality = 6_000.0, depth = 5_000.0, marketing = 4_000.0 }
+	for s in 5:
+		var records := { }
+		Allocation.run_season(alloc, SEED + s, Casting.REASSIGN, true, records)
+		for rec in records.nights:
+			for c in Records.claims(rec, records.built):
+				if c.source == -1:
+					continue
+				var where := "seed %d night %d %s" % [SEED + s, rec.night, c.kind]
+				if c.source < 0 or c.source >= rec.events.size():
+					failed += 1
+					print("FAIL: %s: source %d out of range" % [where, c.source])
+					continue
+				var e: Dictionary = rec.events[c.source]
+				check(
+					e.room == c.room,
+					"%s: claim room %d, event room %d" % [where, c.room, e.room],
+				)
+				match c.kind:
+					"dead_room":
+						check(
+							e.kind == "corridor" and records.built[c.room] != Rooms.CORRIDOR,
+							"%s: not a built room walked as corridor" % where,
+						)
+					"bore":
+						check(
+							e.kind == "corridor" and e.bore > 0.0,
+							"%s: not a boring corridor" % where,
+						)
+					"whiff":
+						check(e.kind in ["whiff", "anim_whiff"], "%s: not a whiff event" % where)
+					"fizzled_ending":
+						check(e.kind in ["whiff", "anim_whiff"], "%s: not a whiff event" % where)
+						for j in range(c.source + 1, rec.events.size()):
+							check(
+								rec.events[j].kind == "corridor",
+								"%s: scare after the finale" % where,
+							)
+					"best_moment":
+						check(
+							e.kind in ["hit", "anim_hit", "effect_hit"],
+							"%s: not a hit event" % where,
+						)
+						for other in rec.events:
+							check(other.reaction <= e.reaction, "%s: better moment exists" % where)
+					_:
+						failed += 1
+						print("FAIL: %s: unknown claim kind" % where)
