@@ -62,7 +62,7 @@ text = "Back to planning"
 [node name="BlueprintNote" type="Label" parent="MarginContainer/VBoxContainer" unique_id=924075738]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Blueprint phase: swaps cost only the difference. Construction costs full price when you open."
+text = "Blueprint phase: swaps cost only the difference. The layout locks when you open."
 
 [node name="ToolBar" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1289261478]
 unique_name_in_owner = true
@@ -103,12 +103,7 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="BenchButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HFlowContainer" unique_id=592902413]
-unique_name_in_owner = true
-layout_mode = 2
-toggle_mode = true
-
-[node name="PullButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HFlowContainer" unique_id=1124511871]
+[node name="RespondButton" type="Button" parent="MarginContainer/VBoxContainer/CalloutBanner/HFlowContainer" unique_id=592902413]
 unique_name_in_owner = true
 layout_mode = 2
 toggle_mode = true

@@ -2,6 +2,7 @@ extends SceneTree
 
 const Allocation = preload("res://sim/allocation.gd")
 const Casting = preload("res://sim/casting.gd")
+const Rooms = preload("res://sim/rooms.gd")
 
 const BALANCED := { build = 11_000.0, quality = 6_000.0, depth = 5_000.0, marketing = 4_000.0 }
 # redundancy pair: identical spend except the build rung, no bench
@@ -19,8 +20,26 @@ var failed := 0
 func _initialize() -> void:
 	response_matters()
 	redundancy_absorbs()
+	surplus_harvested()
 	print("PASS: roster invariants hold" if failed == 0 else "FAIL: %d broken" % failed)
 	quit(1 if failed > 0 else 0)
+
+
+func surplus_harvested() -> void:
+	var layout := [Rooms.PAIR_SCARE, Rooms.SCARE]
+	var roster: Array[Dictionary] = []
+	for s in [5.0, 5.0, 5.0, 5.0, 5.0, 5.0]:
+		roster.append({ skill = s })
+	var never := Casting.resolve(layout, roster, [0, 2], Casting.NEVER)
+	var re := Casting.resolve(layout, roster, [0, 2], Casting.REASSIGN)
+	check(
+		never.layout == [Rooms.SCARE, Rooms.CORRIDOR],
+		"NEVER board wrong: pair should downgrade, scare should go dark, got %s" % [never.layout],
+	)
+	check(
+		re.layout == [Rooms.SCARE, Rooms.SCARE],
+		"surplus not harvested: pair room's spare should reopen the scare, got %s" % [re.layout],
+	)
 
 
 func response_matters() -> void:

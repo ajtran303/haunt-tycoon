@@ -62,6 +62,7 @@ static func resolve(
 
 	if policy == REASSIGN:
 		fill_from_bench(layout, present, roster, headcount, absent)
+		harvest_surplus(layout, present)
 		consolidate(layout, present)
 
 	return downgrade(layout, roster, present)
@@ -123,3 +124,20 @@ static func downgrade(layout: Array, roster: Array[Dictionary], present: Diction
 			sum += roster[a].skill
 		ceilings[i] = sum / here.size()
 	return { layout = tonight, ceilings = ceilings }
+
+
+static func harvest_surplus(layout: Array, present: Dictionary) -> void:
+	var donors: Array = []
+	for room_i in present:
+		if layout[room_i] == Rooms.PAIR_SCARE and present[room_i].size() == 3:
+			donors.append(room_i)
+	donors.sort()
+	var holes := present.keys()
+	holes.sort()
+	holes.reverse() # latest hole first, same priority as fill_from_bench
+	for room_i in holes:
+		if donors.is_empty():
+			break
+		if present[room_i].size() != 1:
+			continue
+		present[room_i].append(present[donors.pop_front()].pop_back())
