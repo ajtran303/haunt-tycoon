@@ -116,7 +116,7 @@ static func run_season(
 			town.record_night(r.satisfaction)
 			revenue = r.tickets + r.gift
 			if records != null:
-				Records.digest(records, group_records, board, roster, night + 1, sample_rng)
+				Records.digest(records, group_records, board, roster, night + 1, sample_rng, town.rep)
 
 		trajectory.append({ cash = cash, revenue = revenue })
 		if cash < Night.LOAN_LIMIT:
