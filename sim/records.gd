@@ -12,20 +12,20 @@ const VOICE := {
 		verdict_high = "Okay. THAT one. First haunt this year that got a flinch out of me.",
 		verdict_mid = "Decent. Wouldn't line up twice.",
 		verdict_low = "I've had scarier bus rides.",
-		best_moment = "Room %d earned the ticket. The rest were warming up.",
+		best_moment = "Room {room} earned the ticket. The rest were warming up.",
 		fizzled_ending = "You walk out on a miss. The last room just let us leave.",
-		dead_room = "Room %d is an empty hallway with a ticket price.",
+		dead_room = "Room {room} is an empty hallway with a ticket price.",
 		dead_rooms = "Half the place was empty hallway. Empty. Hallway.",
 		bore = "There's a stretch in the middle where nothing happens. At all.",
-		whiff = "The guy in room %d jumped too early. We just stood there.",
+		whiff = "The scarer in room {room} jumped too early. We just stood there.",
 	},
 	anxious = {
 		verdict_high = "I want to state for the record that I did not cry. My friends are liars.",
 		verdict_mid = "It was a lot. It was fine. It was a lot.",
 		verdict_low = "Honestly? I was okay the whole time. Which was... nice?",
-		best_moment = "Whatever is in room %d, I'll be seeing it again tonight when I close my eyes.",
+		best_moment = "Whatever is in room {room}, I'll be seeing it again tonight when I close my eyes.",
 		fizzled_ending = "Thank god the last room did nothing. I could not have taken one more.",
-		dead_room = "Room %d was just... a hallway? I braced for nothing.",
+		dead_room = "Room {room} was just... a hallway? I braced for nothing.",
 		dead_rooms = "So many empty rooms. I kept bracing for nothing.",
 		bore = "The long quiet part almost got me to relax. Almost.",
 		whiff = "One of them popped out early and apologized with his eyes.",
@@ -34,25 +34,27 @@ const VOICE := {
 		verdict_high = "I'll allow it. Somebody in there knows what they're doing.",
 		verdict_mid = "Competent. Padded, but competent.",
 		verdict_low = "Rubber masks and air horns. I called every scare before it happened.",
-		best_moment = "Credit where due: room %d has actual craft in it.",
+		best_moment = "Credit where due: room {room} has actual craft in it.",
 		fizzled_ending = "And the finale whiffed. You get one job, last room.",
-		dead_room = "Room %d: bare walls. They didn't even dress it.",
+		dead_room = "Room {room}: bare walls. They didn't even dress it.",
 		dead_rooms = "Multiple undressed rooms. I counted.",
 		bore = "Three hallways in a row. I checked my phone.",
-		whiff = "Watched the guy in room %d blow his cue from a mile off.",
+		whiff = "Watched the actor in room {room} blow their cue from a mile off.",
 	},
 	kid = {
 		verdict_high = "My kid screamed, laughed, and demanded to go again. So we're going again.",
 		verdict_mid = "Kid had fun. I've paid more for less.",
 		verdict_low = "My kid asked when it was going to start. On the way out.",
-		best_moment = "Room %d nearly launched my kid into orbit. Ten out of ten.",
+		best_moment = "Room {room} nearly launched my kid into orbit. Ten out of ten.",
 		fizzled_ending = "The ending fell flat and the car ride home was a review I won't repeat.",
-		dead_room = "We walked through room %d wondering if that part was closed.",
+		dead_room = "We walked through room {room} wondering if that part was closed.",
 		dead_rooms = "Whole stretches were just us, walking. My kid gave up bracing.",
 		bore = "There's a long boring bit where my kid started narrating.",
-		whiff = "The monster in room %d missed their moment and my kid waved at him.",
+		whiff = "The monster in room {room} missed their moment and my kid waved at him.",
 	},
 }
+
+const MAX_CLAIM_LINES := 2
 
 
 static func attribute(group_records: Array, board: Dictionary, roster: Array) -> Dictionary:
@@ -199,3 +201,40 @@ static func salient(rec: Dictionary, claim_list: Array) -> bool:
 				if bore_run >= BORE_STRETCH:
 					return true
 	return false
+
+
+static func render(rec: Dictionary, claim_list: Array) -> String:
+	var v: Dictionary = VOICE[rec.type]
+	var dead: Array = []
+	var by_kind := { }
+	for c in claim_list:
+		if c.kind == "dead_room":
+			dead.append(c)
+		elif not by_kind.has(c.kind):
+			by_kind[c.kind] = c # first of each kind wins
+
+	var lines: Array[String] = []
+	if rec.satisfaction >= VERDICT_HIGH:
+		lines.append(v.verdict_high)
+	elif rec.satisfaction < VERDICT_LOW:
+		lines.append(v.verdict_low)
+	else:
+		lines.append(v.verdict_mid)
+
+	var extras: Array[String] = []
+	if dead.size() >= 2:
+		extras.append(v.dead_rooms)
+	elif dead.size() == 1:
+		extras.append(v.dead_room.format({ room = dead[0].room + 1 }))
+	if by_kind.has("fizzled_ending"):
+		extras.append(v.fizzled_ending)
+	if by_kind.has("best_moment"):
+		extras.append(v.best_moment.format({ room = by_kind.best_moment.room + 1 }))
+	if by_kind.has("bore"):
+		extras.append(v.bore)
+	if by_kind.has("whiff"):
+		extras.append(v.whiff.format({ room = by_kind.whiff.room + 1 }))
+
+	for i in mini(MAX_CLAIM_LINES, extras.size()):
+		lines.append(extras[i])
+	return " ".join(lines)
