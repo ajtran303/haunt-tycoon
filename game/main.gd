@@ -345,10 +345,6 @@ func refresh() -> void:
 			Night.MARKETING_PER_VISITOR,
 		]
 
-	if not %RunButton.disabled and pending_absent.is_empty():
-		%RunButton.text = "Stay closed (−$%.0f)" % Night.NIGHTLY_OVERHEAD if dark else "Run night"
-	%OpenAnywayButton.visible = dark and not %RunButton.disabled and pending_absent.is_empty()
-
 	var strain := "actors fully reset"
 	if interval <= PACES["Packed"]:
 		strain = "actors sprinting between scares"
