@@ -11,8 +11,6 @@ const ROOMS := 10
 const SCARE_MARGINAL := 1_500.0 # BUILD_COST.a - BUILD_COST.g
 const BASE_BUILD := 5_000.0 # ten corridors
 
-const MAX_SCARES := 6
-
 const DOLLARS_PER_CEILING_POINT := 1_500.0
 const MAX_CEILING_BONUS := 10.0
 
