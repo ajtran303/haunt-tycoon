@@ -1,0 +1,81 @@
+[gd_scene format=3 uid="uid://cd2fhn7t5qv0i"]
+
+[ext_resource type="Script" uid="uid://cfr53sfs5elo3" path="res://game/preseason_ui.gd" id="1_c2bt8"]
+
+[node name="Preseason" type="Control" unique_id=935850871]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_c2bt8")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1918802336]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=862386095]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PhaseRail" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=60138696]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CashChart" type="Control" parent="MarginContainer/VBoxContainer" unique_id=1819936181]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+
+[node name="Body" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=435349984]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="BuildPanel" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Body" unique_id=442201647]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ToolBar" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Body/BuildPanel" unique_id=978349423]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SlotRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Body/BuildPanel" unique_id=1848895344]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BudgetLabel" type="Label" parent="MarginContainer/VBoxContainer/Body/BuildPanel" unique_id=1818413294]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BuildNote" type="Label" parent="MarginContainer/VBoxContainer/Body/BuildPanel" unique_id=1913908213]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Blueprint budget: five minutes. The marshal stamps whatever is standing."
+
+[node name="Ledger" type="RichTextLabel" parent="MarginContainer/VBoxContainer/Body" unique_id=625822579]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+bbcode_enabled = true
+
+[node name="NextButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=363854750]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Call the fire marshal."
+
+[node name="MarshalDialog" type="AcceptDialog" parent="." unique_id=2129509437]
+unique_name_in_owner = true
+title = "Fire marshal"
+ok_button_text = "Stamp the permit"

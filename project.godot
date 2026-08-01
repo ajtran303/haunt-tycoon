@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="haunt-tycoon"
-run/main_scene="uid://cehumvasqvadg"
+run/main_scene="uid://cd2fhn7t5qv0i"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
