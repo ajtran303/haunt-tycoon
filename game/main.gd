@@ -9,6 +9,7 @@ const Casting = preload("res://sim/casting.gd")
 const Roster = preload("res://sim/roster.gd")
 const Walkthrough = preload("res://sim/walkthrough.gd")
 const Records = preload("res://sim/records.gd")
+const Preseason = preload("res://sim/preseason.gd")
 
 const ROOM_SLOTS := 10
 
@@ -100,6 +101,8 @@ var force_open := false
 var records := { }
 var sample_rng := RandomNumberGenerator.new()
 var reviews_shown := 0
+
+var presale_pool := 0
 
 
 func _ready() -> void:
@@ -236,7 +239,21 @@ func start_season() -> void:
 	sample_rng.seed = rng.randi()
 	reviews_shown = 0
 
-	if not GameState.alloc.is_empty():
+	presale_pool = 0
+	if not GameState.phases.is_empty():
+		var p: Dictionary = GameState.phases
+		layout = GameState.layout.duplicate()
+		var rep: float = Allocation.starting_rep_for(p.awareness)
+		if p.preview_sat >= 0.0:
+			rep = minf(
+				lerpf(rep, p.preview_sat, Preseason.PREVIEW_WEIGHT),
+				Allocation.MAX_STARTING_REP,
+			)
+		town = Town.new(rep)
+		cash = p.cash
+		presale_pool = p.presold
+		roster_seed = GameState.roster_seed
+	elif not GameState.alloc.is_empty():
 		var a: Dictionary = GameState.alloc
 		layout = Allocation.layout_for(a.build)
 		town = Town.new(Allocation.starting_rep_for(a.marketing))
@@ -247,6 +264,7 @@ func start_season() -> void:
 			layout.append(Rooms.CORRIDOR)
 		town = Town.new()
 		cash = Night.STARTING_CASH - Night.build_cost_for(layout)
+
 	_rebuild_roster()
 	capacity_hints = 0
 	wom_hints = 0
@@ -268,7 +286,7 @@ func start_season() -> void:
 
 
 func _on_slot_pressed(i: int) -> void:
-	if night > 1:
+	if night > 1  or not GameState.phases.is_empty():
 		return
 	if layout[i] == selected_tool:
 		return
@@ -385,8 +403,8 @@ func refresh() -> void:
 		int(Night.NIGHT_SECONDS / interval) * Night.GROUP_SIZE,
 		strain,
 	]
-	%ToolBar.visible = night == 1
-	%BlueprintNote.visible = night == 1
+	%ToolBar.visible = night == 1 and GameState.phases.is_empty()
+	%BlueprintNote.visible = night == 1 and GameState.phases.is_empty()
 
 	if not %RunButton.disabled and pending_absent.is_empty():
 		if dark:
@@ -521,14 +539,16 @@ func _night_finish(line: String) -> void:
 		%RunButton.disabled = true
 		%NightLog.append_text("[b]The season, actor by actor:[/b]\n")
 		for i in records.careers:
-				var c: Dictionary = records.careers[i]
-				var a: Dictionary = records.roster[i]
-				var card := "%s: %d screams, best night Oct %d" % [a.name, c.screams, c.best_night]
-				if c.assists > 0:
-					card += ", %d assists" % c.assists
-				if a.observed_callouts > 0:
-					card += ", called out %s" % ("once" if a.observed_callouts == 1 else "%d times" % a.observed_callouts)
-				%NightLog.append_text(card + "\n")
+			var c: Dictionary = records.careers[i]
+			var a: Dictionary = records.roster[i]
+			var card := "%s: %d screams, best night Oct %d" % [a.name, c.screams, c.best_night]
+			if c.assists > 0:
+				card += ", %d assists" % c.assists
+			if a.observed_callouts > 0:
+				card += ", called out %s" % (
+					"once" if a.observed_callouts == 1 else "%d times" % a.observed_callouts
+				)
+			%NightLog.append_text(card + "\n")
 
 	refresh()
 
@@ -601,7 +621,7 @@ func dark_stretch() -> int:
 
 
 func _on_back_to_planning() -> void:
-	get_tree().change_scene_to_file("res://game/pivot.tscn")
+	get_tree().change_scene_to_file("res://game/preseason.tscn")
 
 
 func skill_word(skill: float) -> String:

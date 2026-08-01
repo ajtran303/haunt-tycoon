@@ -93,7 +93,7 @@ func _on_next() -> void:
 			preview_sat = Allocation.preview(alloc, seed_val, Casting.REASSIGN, layout)
 			enter_phase(Phase.OCT1)
 		_:
-			pass # Oct 1 handoff arrives in sub-step 4
+			_open_the_doors()
 
 
 func _build_rail() -> void:
@@ -195,7 +195,7 @@ func refresh() -> void:
 	_refresh_ledger(p)
 	%CashChart.queue_redraw()
 	%NextButton.text = next_text()
-	%NextButton.disabled = phase == Phase.OCT1
+	%NextButton.disabled = false
 	%SkipButton.visible = phase == Phase.PREVIEW
 
 
@@ -217,7 +217,7 @@ func next_text() -> String:
 		Phase.PREVIEW:
 			return "Play the press preview (−%s)" % money(preview_cost())
 		_:
-			return "Oct 1 (next sub-step)"
+			return "Open the doors"
 
 
 func _refresh_build() -> void:
@@ -415,3 +415,20 @@ func press_blurb(sat: float) -> String:
 	if sat >= 30.0:
 		return "\"An ambitious haunt that isn't ready yet.\""
 	return "\"Skip it. The parking queue is scarier than the house.\""
+
+
+func _open_the_doors() -> void:
+	var name: String = PHASE_NAMES[phase]
+	durations[name] = durations.get(name, 0.0) \
+			+ (Time.get_ticks_msec() - phase_started_ms) / 1000.0
+	var total := 0.0
+	for d in durations.values():
+		total += d
+	print("pre-season total: %.1fs (build %.1fs)" % [total, durations.get("Build", 0.0)])
+	GameState.alloc = alloc.duplicate()
+	GameState.layout = layout.duplicate()
+	GameState.roster_seed = seed_val + 300_000
+	var phases := projected_phases()
+	phases.preview_sat = preview_sat
+	GameState.phases = phases
+	get_tree().change_scene_to_file("res://game/main.tscn")
