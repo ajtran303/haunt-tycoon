@@ -2,6 +2,7 @@ extends SceneTree
 
 const Allocation = preload("res://sim/allocation.gd")
 const Night = preload("res://sim/night.gd")
+const Casting = preload("res://sim/casting.gd")
 
 const BUILD_HEAVY := { build = 23_000.0, quality = 0.0, depth = 0.0, marketing = 1_000.0 }
 const CAST_HEAVY := { build = 9_500.0, quality = 14_000.0, depth = 5_000.0, marketing = 1_000.0 }
@@ -21,8 +22,10 @@ func _initialize() -> void:
 
 	print("seed  | crossings | build final | cast final | gap")
 	for s in SEEDS:
-		var a := cash_of(Allocation.run_season(BUILD_HEAVY, SEED + s))
-		var b := cash_of(Allocation.run_season(CAST_HEAVY, SEED + s))
+		var pa: Dictionary = Allocation.run_preseason(BUILD_HEAVY, SEED + s)
+		var pb: Dictionary = Allocation.run_preseason(CAST_HEAVY, SEED + s)
+		var a := cash_of(Allocation.run_season(BUILD_HEAVY, SEED + s, Casting.REASSIGN, true, null, pa))
+		var b := cash_of(Allocation.run_season(CAST_HEAVY, SEED + s, Casting.REASSIGN, true, null, pb))
 		var gap := maxf(a[-1], b[-1]) / minf(a[-1], b[-1])
 		print("%d | %9d | $%.0f | $%.0f | %.2fx" % [SEED + s, crossings(a, b), a[-1], b[-1], gap])
 		build_finals.append(a[-1])

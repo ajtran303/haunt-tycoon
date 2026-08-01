@@ -81,10 +81,13 @@ static func run_season(
 				- alloc.quality \
 				- alloc.marketing
 	else:
-		town = Town.new(starting_rep_for(phases.awareness))
+		var opening_rep := starting_rep_for(phases.awareness)
 		if phases.preview_sat >= 0.0:
-			for i in town.heard.size():
-				town.heard[i] = lerpf(town.heard[i], phases.preview_sat, Preseason.PREVIEW_WEIGHT)
+			opening_rep = minf(
+				lerpf(opening_rep, phases.preview_sat, Preseason.PREVIEW_WEIGHT),
+				MAX_STARTING_REP,
+			)
+		town = Town.new(opening_rep)
 		cash = phases.cash
 		presale_pool = phases.presold
 

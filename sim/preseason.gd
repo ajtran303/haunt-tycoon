@@ -4,13 +4,19 @@ const BASE_OCCUPANCY := 65
 const EGRESS_COST := { "g": 0, "a": 4, "p": 6, "n": 1, "e": 1 } # blinds and props block egress
 
 const PERMIT_FEE := 1_000.0
-const REHEARSAL_NIGHTS := 5
+const REHEARSAL_NIGHTS := 7
 const PRESALE_DISCOUNT := 0.2
 const PRESALE_PUSH_SHARE := 0.5 # marketing split: rest is awareness
-const PRESALE_PUSH_PER_TICKET := 10.0 # push dollars to presell one ticket
+const PRESALE_PUSH_PER_TICKET := 15.0 # push dollars to presell one ticket
 
 const PREVIEW_WEIGHT := 0.5 # how much the blurb moves opening belief
 const PREVIEW_DEMAND := 90 # press and comps: ten groups
+
+const SEASON_GOALS := [
+	  { name = "loan paid", cash = 0.0 },
+	  { name = "solid season", cash = 300_000.0 },
+	  { name = "local legend", cash = 330_000.0 },
+]
 
 static func marshal_cap(layout: Array) -> int:
 	var cap := BASE_OCCUPANCY
