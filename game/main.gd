@@ -286,7 +286,7 @@ func start_season() -> void:
 
 
 func _on_slot_pressed(i: int) -> void:
-	if night > 1  or not GameState.phases.is_empty():
+	if night > 1 or not GameState.phases.is_empty():
 		return
 	if layout[i] == selected_tool:
 		return
@@ -549,6 +549,14 @@ func _night_finish(line: String) -> void:
 					"once" if a.observed_callouts == 1 else "%d times" % a.observed_callouts
 				)
 			%NightLog.append_text(card + "\n")
+		var tier := ""
+		for g in Preseason.SEASON_GOALS:
+			if cash >= g.cash:
+				tier = g.name
+		if tier == "":
+			%NightLog.append_text("[b]The loan outlives the season. The bank owns the story.[/b]\n")
+		else:
+			%NightLog.append_text("[b]Season verdict: %s.[/b]\n" % tier)
 
 	refresh()
 
@@ -798,24 +806,27 @@ func _resolve_and_run(demand: int) -> void:
 	for c in board.ceilings:
 		bonus_row.append(Allocation.effective_bonus(c, interval))
 	var group_records: Array = []
+	var gate := demand + presale_pool
 	var r: Dictionary = Night.run(
 		board.layout,
 		interval,
 		rng,
-		demand,
+		gate,
 		Walkthrough.PRIME_SCALE,
 		"",
 		0.0,
 		bonus_row,
 		group_records,
 	)
+	var redeemed := mini(presale_pool, r.groups * Night.GROUP_SIZE)
+	presale_pool -= redeemed
 	if not records.has("built"):
 		records.built = layout.duplicate()
 		records.roster = roster
 	var headcount := mini(Night.actors_for(layout), roster.size())
 	var wage_fix := Allocation.roster_wages(roster, headcount, absent, policy) \
 			- Night.wages_for(board.layout)
-	var profit: float = r.profit - wage_fix
+	var profit: float = r.profit - wage_fix - redeemed * Night.TICKET_PRICE
 	var capacity := int(Night.NIGHT_SECONDS / interval)
 	var sold_out: bool = demand / Night.GROUP_SIZE > capacity
 	town.record_night(r.satisfaction)
@@ -840,6 +851,8 @@ func _resolve_and_run(demand: int) -> void:
 				% [roster[i].name, ordinal(roster[i].observed_callouts)]
 	if WEATHER_NOTES.has(weather[night - 1]):
 		line += " [color=#8d99ae]%s[/color]" % WEATHER_NOTES[weather[night - 1]]
+	if redeemed > 0:
+		line += " [color=#8d99ae]%d presold tickets redeemed (no door take).[/color]" % redeemed
 	if sold_out:
 		var turned_away: int = demand - r.groups * Night.GROUP_SIZE
 		line += " [color=#e0a458]Sold out! Turned away ~%d (about %s in tickets).[/color]" % [

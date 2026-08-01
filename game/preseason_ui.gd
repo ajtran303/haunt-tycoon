@@ -260,6 +260,10 @@ func _refresh_ledger(p: Dictionary) -> void:
 		"\nSeptember low point: %s (loan limit %s)\n"
 		% [money(trough_of(p)), money(Night.LOAN_LIMIT)]
 	)
+	var goals := []
+	for g in Preseason.SEASON_GOALS:
+		goals.append("%s %s" % [money(g.cash), g.name])
+	%Ledger.append_text("Halloween close: %s\n" % " • ".join(goals))
 
 
 func trough_of(p: Dictionary) -> float:
