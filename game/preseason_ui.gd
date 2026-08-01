@@ -28,9 +28,7 @@ var preview_planned := true
 var seed_val := 0
 var roster: Array[Dictionary] = []
 var selected_tool: String = Rooms.SCARE
-var phase_started_ms := 0
 var preview_sat := -1.0
-var durations := { }
 
 
 func _ready() -> void:
@@ -71,12 +69,7 @@ func posted_entries() -> int:
 
 
 func enter_phase(p: int) -> void:
-	var name: String = PHASE_NAMES[phase]
-	var elapsed := (Time.get_ticks_msec() - phase_started_ms) / 1000.0
-	durations[name] = durations.get(name, 0.0) + elapsed
-	print("phase %s: %.1fs" % [name, durations[name]])
 	phase = p
-	phase_started_ms = Time.get_ticks_msec()
 	refresh()
 
 
@@ -422,13 +415,6 @@ func press_blurb(sat: float) -> String:
 
 
 func _open_the_doors() -> void:
-	var name: String = PHASE_NAMES[phase]
-	durations[name] = durations.get(name, 0.0) \
-			+ (Time.get_ticks_msec() - phase_started_ms) / 1000.0
-	var total := 0.0
-	for d in durations.values():
-		total += d
-	print("pre-season total: %.1fs (build %.1fs)" % [total, durations.get("Build", 0.0)])
 	GameState.alloc = alloc.duplicate()
 	GameState.layout = layout.duplicate()
 	GameState.roster_seed = seed_val + 300_000
