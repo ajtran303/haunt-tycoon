@@ -211,13 +211,15 @@ func _refresh_roster_strip() -> void:
 		chip.text = text
 		if records.has("careers") and records.careers.has(i):
 			var c: Dictionary = records.careers[i]
-			chip.tooltip_text += "\n%d screams | %d whiffs | best night Oct %d" % [
+			chip.tooltip_text += "\n%d pts | %d screams | %d whiffs" % [
+				points_for(c),
 				c.screams,
 				c.whiffs,
-				c.best_night,
 			]
 			if c.assists > 0:
 				chip.tooltip_text += " | %d assists" % c.assists
+			if c.screams > 0:
+				chip.tooltip_text += " | best night Oct %d" % c.best_night
 
 
 func slot_style(c: Color) -> StyleBoxFlat:
@@ -538,12 +540,25 @@ func _night_finish(line: String) -> void:
 		%RunButton.text = "Season over: %s" % money(cash)
 		%RunButton.disabled = true
 		%NightLog.append_text("[b]The season, actor by actor:[/b]\n")
-		for i in records.careers:
+		var order : Array = records.careers.keys()
+		order.sort_custom(
+			func(x, y):
+				return points_for(records.careers[x]) > points_for(records.careers[y]),
+		)
+		for i in order:
 			var c: Dictionary = records.careers[i]
 			var a: Dictionary = records.roster[i]
-			var card := "%s: %d screams, best night Oct %d" % [a.name, c.screams, c.best_night]
-			if c.assists > 0:
-				card += ", %d assists" % c.assists
+			var card := "%s: %d points" % [a.name, points_for(c)]
+			if c.screams > 0:
+				card += " (%d screams%s), best night Oct %d" % [
+					c.screams,
+					", %d assists" % c.assists if c.assists > 0 else "",
+					c.best_night,
+				]
+			elif c.assists > 0:
+				card += " (the setup behind %d screams)" % c.assists
+			else:
+				card += " (a quiet season)"
 			if a.observed_callouts > 0:
 				card += ", called out %s" % (
 					"once" if a.observed_callouts == 1 else "%d times" % a.observed_callouts
@@ -978,3 +993,7 @@ func _on_go_dark() -> void:
 		"[b]%s, Oct %d[/b]  Dark tonight: %s, and you kept the doors shut. −$%.0f keeps the lights on."
 		% [Calendar.DAY_NAMES[Calendar.weekday(night)], night, cause, Night.NIGHTLY_OVERHEAD]
 	)
+
+
+func points_for(c: Dictionary) -> int:
+	return c.screams + int(c.assists / 2.0)

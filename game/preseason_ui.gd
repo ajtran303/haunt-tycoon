@@ -46,7 +46,6 @@ func _ready() -> void:
 			alloc.marketing = v
 			refresh(),
 	)
-	phase_started_ms = Time.get_ticks_msec()
 	refresh()
 
 
