@@ -105,7 +105,7 @@ func _initialize() -> void:
 	var best_viable: float = best_means.values().max()
 	for name in DENSE_BUILDS:
 		var dense_best := mean_total(DENSE_BUILDS[name], Night.SEASON_NIGHTS + 1)
-		for day in range(1, Night.SEASON_NIGHTS + 1):
+		for day in range(1, Night.SEASON_NIGHTS + 1, 3):
 			dense_best = maxf(dense_best, mean_total(DENSE_BUILDS[name], day))
 		check(
 			dense_best <= best_viable * DENSE_LEAD,

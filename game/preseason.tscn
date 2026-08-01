@@ -62,7 +62,54 @@ layout_mode = 2
 [node name="BuildNote" type="Label" parent="MarginContainer/VBoxContainer/Body/BuildPanel" unique_id=1913908213]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Blueprint budget: five minutes. The marshal stamps whatever is standing."
+text = "Blueprint budget: five minutes."
+
+[node name="CastingPanel" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Body/BuildPanel" unique_id=1859337815]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="CastingLabel" type="Label" parent="MarginContainer/VBoxContainer/Body/BuildPanel/CastingPanel" unique_id=1975445064]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="RosterChips" type="HFlowContainer" parent="MarginContainer/VBoxContainer/Body/BuildPanel/CastingPanel" unique_id=1676226104]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="MarketingPanel" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Body/BuildPanel" unique_id=961603890]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="MarketingSlider" type="HSlider" parent="MarginContainer/VBoxContainer/Body/BuildPanel/MarketingPanel" unique_id=1452296759]
+unique_name_in_owner = true
+layout_mode = 2
+max_value = 20000.0
+step = 500.0
+value = 6000.0
+
+[node name="MarketingLabel" type="Label" parent="MarginContainer/VBoxContainer/Body/BuildPanel/MarketingPanel" unique_id=1137459935]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="PreviewPanel" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Body/BuildPanel" unique_id=687614199]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="PreviewLabel" type="Label" parent="MarginContainer/VBoxContainer/Body/BuildPanel/PreviewPanel" unique_id=2010206352]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="PreviewBlurb" type="RichTextLabel" parent="MarginContainer/VBoxContainer/Body/BuildPanel/PreviewPanel" unique_id=1167337159]
+unique_name_in_owner = true
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
 
 [node name="Ledger" type="RichTextLabel" parent="MarginContainer/VBoxContainer/Body" unique_id=625822579]
 unique_name_in_owner = true
@@ -70,7 +117,17 @@ custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 bbcode_enabled = true
 
-[node name="NextButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=363854750]
+[node name="Buttons" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1594211676]
+layout_mode = 2
+
+[node name="NextButton" type="Button" parent="MarginContainer/VBoxContainer/Buttons" unique_id=363854750]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Sign the cast"
+
+[node name="SkipButton" type="Button" parent="MarginContainer/VBoxContainer/Buttons" unique_id=1537081557]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Skip the preview"

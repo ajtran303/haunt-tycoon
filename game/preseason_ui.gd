@@ -5,6 +5,7 @@ const Rooms = preload("res://sim/rooms.gd")
 const Allocation = preload("res://sim/allocation.gd")
 const Preseason = preload("res://sim/preseason.gd")
 const MainUI = preload("res://game/main.gd")
+const Casting = preload("res://sim/casting.gd")
 
 enum Phase {
 	BUILD,
@@ -28,6 +29,7 @@ var seed_val := 0
 var roster: Array[Dictionary] = []
 var selected_tool: String = Rooms.SCARE
 var phase_started_ms := 0
+var preview_sat := -1.0
 var durations := { }
 
 
@@ -40,6 +42,12 @@ func _ready() -> void:
 	_rebuild_roster()
 	%CashChart.draw.connect(_on_chart_draw)
 	%NextButton.pressed.connect(_on_next)
+	%SkipButton.pressed.connect(_on_skip_preview)
+	%MarketingSlider.value_changed.connect(
+		func(v: float):
+			alloc.marketing = v
+			refresh(),
+	)
 	phase_started_ms = Time.get_ticks_msec()
 	refresh()
 
@@ -76,8 +84,16 @@ func _on_next() -> void:
 	match phase:
 		Phase.BUILD:
 			enter_phase(Phase.CASTING)
+		Phase.CASTING:
+			enter_phase(Phase.MARKETING)
+		Phase.MARKETING:
+			enter_phase(Phase.PREVIEW)
+		Phase.PREVIEW:
+			preview_planned = true
+			preview_sat = Allocation.preview(alloc, seed_val, Casting.REASSIGN, layout)
+			enter_phase(Phase.OCT1)
 		_:
-			pass # casting, marketing, preview arrive in sub-step 3
+			pass # Oct 1 handoff arrives in sub-step 4
 
 
 func _build_rail() -> void:
@@ -175,18 +191,33 @@ func refresh() -> void:
 	var p := projected_phases()
 	_refresh_rail()
 	_refresh_build()
+	_refresh_phase_panels(p)
 	_refresh_ledger(p)
 	%CashChart.queue_redraw()
 	%NextButton.text = next_text()
-	%NextButton.disabled = phase != Phase.BUILD
+	%NextButton.disabled = phase == Phase.OCT1
+	%SkipButton.visible = phase == Phase.PREVIEW
 
 
 func next_text() -> String:
 	match phase:
 		Phase.BUILD:
-			return "Sign the cast (%s)" % money(alloc.quality)
+			return "Finish the build (%s)" % money(Night.build_cost_for(layout))
+		Phase.CASTING:
+			return (
+				"The layout is final. Casting spend %s; %d on the bench at $%.0f a night on call."
+				% [
+					money(alloc.quality),
+					Allocation.spares_for(alloc.depth),
+					Allocation.ON_CALL_WAGE,
+				]
+			)
+		Phase.MARKETING:
+			return "Lock the campaign (%s)" % money(alloc.marketing)
+		Phase.PREVIEW:
+			return "Play the press preview (−%s)" % money(preview_cost())
 		_:
-			return "%s (next sub-step)" % PHASE_NAMES[phase]
+			return "Oct 1 (next sub-step)"
 
 
 func _refresh_build() -> void:
@@ -292,3 +323,95 @@ func _on_chart_draw() -> void:
 
 func money(x: float) -> String:
 	return "-$%.0f" % absf(x) if x < 0.0 else "$%.0f" % x
+
+
+func _on_skip_preview() -> void:
+	preview_planned = false
+	preview_sat = -1.0
+	enter_phase(Phase.OCT1)
+
+
+func preview_cost() -> float:
+	return Night.wages_for(layout) + Night.NIGHTLY_OVERHEAD + Night.upkeep_for(layout)
+
+
+func _refresh_phase_panels(p: Dictionary) -> void:
+	%CastingPanel.visible = phase == Phase.CASTING
+	%MarketingPanel.visible = phase == Phase.MARKETING
+	%PreviewPanel.visible = phase >= Phase.PREVIEW
+
+	if phase == Phase.CASTING:
+		_refresh_chips()
+		%CastingLabel.text = (
+			"Your casting director signed these. Casting spend %s; the bench stays on call at $%.0f a night."
+			% [money(alloc.quality), Allocation.ON_CALL_WAGE]
+		)
+
+	if phase == Phase.MARKETING:
+		var push: float = alloc.marketing * Preseason.PRESALE_PUSH_SHARE
+		var presold := int(push / Preseason.PRESALE_PUSH_PER_TICKET)
+		%MarketingLabel.text = (
+			"Awareness %s → the town opens at rep %.0f.\nPresale push %s → %d tickets sold now for %s, redeemed off October's door."
+			% [
+				money(alloc.marketing - push),
+				Allocation.starting_rep_for(alloc.marketing - push),
+				money(push),
+				presold,
+				money(presold * Night.TICKET_PRICE * (1.0 - Preseason.PRESALE_DISCOUNT)),
+			]
+		)
+
+	if phase == Phase.PREVIEW:
+		%PreviewLabel.text = (
+			"One comped, full-detail night for the press before doors open: real wages and overhead (−%s), no revenue. What they print seeds opening night."
+			% money(preview_cost())
+		)
+		%PreviewBlurb.text = ""
+	elif phase == Phase.OCT1:
+		%PreviewLabel.text = "The press has spoken." if preview_sat >= 0.0 else ""
+		%PreviewBlurb.text = (
+			"[i]%s[/i] — The Gazette, dress-night preview" % press_blurb(preview_sat)
+			if preview_sat >= 0.0
+			else "[color=#8d99ae]No press came. The doors open cold.[/color]"
+		)
+
+
+func _refresh_chips() -> void:
+	for c in %RosterChips.get_children():
+		c.free()
+	var headcount := mini(Night.actors_for(layout), roster.size())
+	for i in roster.size():
+		var chip := Button.new()
+		chip.disabled = true
+		chip.focus_mode = Control.FOCUS_NONE
+		var a: Dictionary = roster[i]
+		chip.text = "%s | %s" % [a.name, skill_word(a.skill)]
+		if i >= headcount:
+			chip.text += " | on call"
+			chip.modulate = Color(1.0, 1.0, 1.0, 0.55)
+			chip.tooltip_text = (
+				"on call: $%.0f a night when idle, $%.0f when they perform"
+				% [Allocation.ON_CALL_WAGE, a.wage]
+			)
+		else:
+			chip.tooltip_text = "$%.0f a night" % a.wage
+		%RosterChips.add_child(chip)
+
+
+func skill_word(skill: float) -> String:
+	for band in MainUI.SKILL_WORDS:
+		if skill < band[0]:
+			return band[1]
+	return MainUI.SKILL_WORDS[-1][1]
+
+
+func press_blurb(sat: float) -> String:
+	if sat >= 80.0:
+		return "\"The scariest thing this town has built in years. Go.\""
+	if sat >= 60.0:
+		return "\"Worth the ticket. Bring someone to grab.\""
+	if sat >= 45.0:
+		return "\"Some real scares in there, between long hallways.\""
+	if sat >= 30.0:
+		return "\"An ambitious haunt that isn't ready yet.\""
+	return "\"Skip it. The parking queue is scarier than the house.\""
