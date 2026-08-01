@@ -165,24 +165,30 @@ static func run_preseason(
 	preview_played := true,
 	discount := Preseason.PRESALE_DISCOUNT,
 	policy: int = Casting.REASSIGN,
+	layout_override: Variant = null,
 ) -> Dictionary:
 	var roster_rng := RandomNumberGenerator.new()
 	roster_rng.seed = seed_val + 300_000
-	var layout := layout_for(alloc.build)
-	var roster := roster_for(alloc, roster_rng)
+	var layout: Array = layout_override if layout_override != null else layout_for(alloc.build)
+	var roster := roster_for(alloc, roster_rng, layout)
 	var phases := Preseason.run_phases(alloc, layout, roster.size(), preview_played, discount)
 	if preview_played:
-		phases.preview_sat = preview(alloc, seed_val, policy)
+		phases.preview_sat = preview(alloc, seed_val, policy, layout)
 	return phases
 
 
-static func preview(alloc: Dictionary, seed_val: int, policy: int = Casting.REASSIGN) -> float:
+static func preview(
+	alloc: Dictionary,
+	seed_val: int,
+	policy: int = Casting.REASSIGN,
+	layout_override: Variant = null,
+) -> float:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_val + 500_000
 	var roster_rng := RandomNumberGenerator.new()
 	roster_rng.seed = seed_val + 300_000
-	var layout := layout_for(alloc.build)
-	var roster := roster_for(alloc, roster_rng)
+	var layout: Array = layout_override if layout_override != null else layout_for(alloc.build)
+	var roster := roster_for(alloc, roster_rng, layout)
 	var board: Dictionary = Casting.resolve(layout, roster, [], policy)
 	var bonus_row: Array = []
 	for c in board.ceilings:
@@ -237,8 +243,13 @@ static func is_dark(tonight: Array, demand: int, night: int) -> bool: # night is
 			and demand * (Night.TICKET_PRICE - Night.MARKETING_PER_VISITOR) < marginal
 
 
-static func roster_for(alloc: Dictionary, rng: RandomNumberGenerator) -> Array[Dictionary]:
-	var headcount := Night.actors_for(layout_for(alloc.build))
+static func roster_for(
+	alloc: Dictionary,
+	rng: RandomNumberGenerator,
+	layout_override: Variant = null,
+) -> Array[Dictionary]:
+	var layout: Array = layout_override if layout_override != null else layout_for(alloc.build)
+	var headcount := Night.actors_for(layout)
 	var bench := spares_for(alloc.depth)
 	var tier := minf(alloc.quality / HIRE_TIER_DOLLARS, 1.0)
 	return Roster.auto_hire(Roster.pool(rng, headcount + bench, tier), headcount, bench)
