@@ -73,9 +73,4 @@ bbcode_enabled = true
 [node name="NextButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=363854750]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Call the fire marshal."
-
-[node name="MarshalDialog" type="AcceptDialog" parent="." unique_id=2129509437]
-unique_name_in_owner = true
-title = "Fire marshal"
-ok_button_text = "Stamp the permit"
+text = "Sign the cast"

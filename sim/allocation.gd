@@ -59,8 +59,6 @@ static func run_season(
 	var layout := layout_for(alloc.build)
 	var roster := roster_for(alloc, roster_rng)
 
-	var floor_interval := Preseason.dispatch_floor(layout)
-
 	var sample_rng := RandomNumberGenerator.new()
 	sample_rng.seed = seed_val + 400_000
 	if records != null:
@@ -115,7 +113,6 @@ static func run_season(
 			var demand := organic + presale_pool
 			var loose_cap := int(Night.NIGHT_SECONDS / Night.LOOSE_INTERVAL) * Night.GROUP_SIZE
 			var interval := Night.PACKED_INTERVAL if demand > loose_cap else Night.LOOSE_INTERVAL
-			interval = maxf(interval, floor_interval)
 			var bonus_row: Array = []
 			for c in board.ceilings:
 				bonus_row.append(effective_bonus(c, interval))

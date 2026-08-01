@@ -8,13 +8,12 @@ const MainUI = preload("res://game/main.gd")
 
 enum Phase {
 	BUILD,
-	MARSHAL,
 	CASTING,
 	MARKETING,
 	PREVIEW,
 	OCT1,
 }
-const PHASE_NAMES := ["Build", "Marshal", "Casting", "Marketing", "Preview", "Oct 1"]
+const PHASE_NAMES := ["Build", "Casting", "Marketing", "Preview", "Oct 1"]
 
 # Keep byte-equal to REFERENCE in tests/test_preseason.gd.
 const REFERENCE := { build = 11_000.0, quality = 9_000.0, depth = 5_000.0, marketing = 6_000.0 }
@@ -41,15 +40,6 @@ func _ready() -> void:
 	_rebuild_roster()
 	%CashChart.draw.connect(_on_chart_draw)
 	%NextButton.pressed.connect(_on_next)
-	%MarshalDialog.add_cancel_button("Keep building")
-	%MarshalDialog.confirmed.connect(
-		func():
-			enter_phase(Phase.CASTING),
-	)
-	%MarshalDialog.canceled.connect(
-		func():
-			enter_phase(Phase.BUILD),
-	)
 	phase_started_ms = Time.get_ticks_msec()
 	refresh()
 
@@ -60,14 +50,14 @@ func projected_phases() -> Dictionary:
 
 func posted_entries() -> int:
 	match phase:
-		Phase.BUILD, Phase.MARSHAL:
+		Phase.BUILD:
 			return 0
 		Phase.CASTING:
-			return 2
+			return 1
 		Phase.MARKETING:
-			return 3
+			return 2
 		Phase.PREVIEW:
-			return 6
+			return 5
 		_:
 			return projected_phases().ledger.size()
 
@@ -85,34 +75,9 @@ func enter_phase(p: int) -> void:
 func _on_next() -> void:
 	match phase:
 		Phase.BUILD:
-			_on_call_marshal()
+			enter_phase(Phase.CASTING)
 		_:
 			pass # casting, marketing, preview arrive in sub-step 3
-
-
-func _on_call_marshal() -> void:
-	enter_phase(Phase.MARSHAL)
-	var cap := Preseason.marshal_cap(layout)
-	var floor_interval := Preseason.dispatch_floor(layout)
-	%MarshalDialog.dialog_text = (
-		"The fire marshal walks the building.\n\n" + "Occupancy: %d inside at a time.\n" % cap
-		+ pace_verdict(floor_interval)
-		+ "\n\nPermit fee %s. Stamp it, and the layout is final for the season."
-		% money(Preseason.PERMIT_FEE)
-	)
-	%MarshalDialog.popup_centered()
-
-
-func pace_verdict(floor_interval: float) -> String:
-	if floor_interval <= MainUI.PACES["Packed"]:
-		return "Certified for a packed line: every pace is legal."
-	if floor_interval <= MainUI.PACES["Brisk"]:
-		return "Blinds and props crowd the exits. No packed line; brisk at most, and sellout nights will clip."
-	if floor_interval <= MainUI.PACES["Loose"]:
-		return "The exits barely clear code. Loose pace only."
-	return "Groups must trickle in %d seconds apart. This building can't run a line." % int(
-		ceil(floor_interval)
-	)
 
 
 func _build_rail() -> void:
@@ -219,7 +184,7 @@ func refresh() -> void:
 func next_text() -> String:
 	match phase:
 		Phase.BUILD:
-			return "Call the fire marshal"
+			return "Sign the cast (%s)" % money(alloc.quality)
 		_:
 			return "%s (next sub-step)" % PHASE_NAMES[phase]
 

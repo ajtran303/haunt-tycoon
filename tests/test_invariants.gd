@@ -24,6 +24,14 @@ const AUDIENCE_CAP := 75.0 # every layout leaves one type below this; pair_bank 
 
 const TROUGH_MARGIN := 2_500.0 # viable presets must clear the loan line by this much
 
+# Density is expression, not strategy: with no occupancy cap, payroll must be
+# what stops wall-to-wall scares. No dense build may lead the field past the band.
+const DENSE_BUILDS := {
+	six_scare = ["a", "g", "a", "g", "a", "a", "g", "a", "g", "a"],
+	wall_to_wall = ["a", "a", "a", "a", "a", "a", "a", "a", "a", "a"],
+}
+const DENSE_LEAD := 1.15
+
 var failed := 0
 
 
@@ -93,6 +101,16 @@ func _initialize() -> void:
 
 	var spread: float = best_means.values().max() / best_means.values().min()
 	check(spread >= MIN_SPREAD, "viable spread %.2fx: field is flattening" % spread)
+
+	var best_viable: float = best_means.values().max()
+	for name in DENSE_BUILDS:
+		var dense_best := mean_total(DENSE_BUILDS[name], Night.SEASON_NIGHTS + 1)
+		for day in range(1, Night.SEASON_NIGHTS + 1):
+			dense_best = maxf(dense_best, mean_total(DENSE_BUILDS[name], day))
+		check(
+			dense_best <= best_viable * DENSE_LEAD,
+			"%s leads the field: $%.0f vs best viable $%.0f" % [name, dense_best, best_viable],
+		)
 
 	check(
 		max_bonus >= MIN_TOP_BONUS,
